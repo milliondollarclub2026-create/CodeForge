@@ -7,13 +7,18 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const authSchema = z.object({
+const loginSchema = z.object({
   email: z.string().trim().email({ message: "Please enter a valid email" }).max(255),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }).max(100),
 });
 
+const signupSchema = loginSchema.extend({
+  name: z.string().trim().min(1, { message: "Name is required" }).max(100),
+});
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,11 +26,19 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const validation = authSchema.safeParse({ email, password });
-    if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
-      return;
+
+    if (isLogin) {
+      const validation = loginSchema.safeParse({ email, password });
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
+    } else {
+      const validation = signupSchema.safeParse({ email, password, name });
+      if (!validation.success) {
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
     }
 
     setLoading(true);
@@ -40,6 +53,8 @@ const Auth = () => {
         if (error) {
           if (error.message.includes("Invalid login credentials")) {
             toast.error("Invalid email or password");
+          } else if (error.message.includes("Email not confirmed")) {
+            toast.error("Please verify your email before signing in");
           } else {
             toast.error(error.message);
           }
@@ -54,6 +69,9 @@ const Auth = () => {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              name: name.trim(),
+            },
           },
         });
 
@@ -66,14 +84,23 @@ const Auth = () => {
           return;
         }
 
-        toast.success("Account created successfully!");
-        navigate("/");
+        toast.success("Check your email to verify your account");
+        setName("");
+        setEmail("");
+        setPassword("");
       }
     } catch (error) {
       toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setName("");
+    setEmail("");
+    setPassword("");
   };
 
   return (
@@ -91,6 +118,24 @@ const Auth = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm text-foreground">
+                Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="auth-input h-11"
+                required
+                disabled={loading}
+              />
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm text-foreground">
               Email
@@ -160,10 +205,16 @@ const Auth = () => {
           </Button>
         </form>
 
+        {!isLogin && (
+          <p className="mt-4 text-xs text-muted-foreground text-center">
+            You'll receive a verification email to confirm your account
+          </p>
+        )}
+
         <div className="mt-6 text-center">
           <button
             type="button"
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={toggleMode}
             className="auth-toggle text-sm"
             disabled={loading}
           >
