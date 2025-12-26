@@ -8,15 +8,41 @@ All notable changes to this project will be documented in this file.
 - **Interactive Features Node**: Introduced a new node type called 'Features'. This node allows users to dynamically add, view, and remove a list of feature items directly on the canvas.
 - **One-per-project limit for Features Node**: The node creation dropdown now intelligently hides the 'Features' option if a features node already exists in the project.
 - **Feature Persistence**: The list of features within the 'Features' node is now saved to the database and will persist across sessions.
+- **Directional Edge Connections**: Implemented smart edge routing that connects nodes based on which handle is clicked:
+  - Click top handle → connects to bottom of target node
+  - Click right handle → connects to left of target node
+  - Click bottom handle → connects to top of target node
+  - Click left handle → connects to right of target node
+- **Handle IDs on Root Nodes**: Added explicit handle IDs ("top", "right", "bottom", "left") to all root node handles for proper edge connection tracking.
+- **Dynamic Feature Node Handle**: Features node now displays a single handle on the appropriate side based on its connection to the root node, visible only on hover with blue styling.
+- **Edge Handle Columns**: Added `source_handle` and `target_handle` TEXT columns to edges table for tracking precise connection points.
+- **Smooth Step Edges**: Feature node connections now use smooth step routing (rounded 90-degree corners) instead of sharp angles.
+- **Edge Creation Rollback**: If edge creation fails, the newly created node is automatically deleted from the database to maintain data integrity.
 
 ### Changed
 - **Features Node Styling**: The 'Features' node now renders with a dark background and a blue border to distinguish it visually. Its default title is now "Features" instead of "New Features".
 - **Edge Connection Specificity**: Edges created between nodes now connect to the specific handle point (+ icon) that was clicked, rather than a default position.
+- **Edge Type for Features**: Changed from "step" edges to "smoothstep" edges for smoother visual appearance.
+- **Edge Styling**: Feature edges now have increased stroke width (2px) for better visibility.
+- **RLS Policy for Edges**: Updated INSERT policy to support new `source_handle` and `target_handle` columns.
 
 ### Fixed
-- **Node Creation Stale State Bug**: Fixed a critical bug where creating a node would fail with a "parent node not found" error. The logic now correctly uses React Flow's internal state to find the parent node.
+- **Node Creation Stale State Bug**: Fixed a critical bug where creating a node would fail with a "parent node not found" error. The logic now correctly uses React Flow's internal state to find the parent node via `getNode()` hook.
 - **Missing Connection Lines on Reload**: Fixed an issue where connection lines would disappear after reloading the page. The data-fetching logic now correctly loads the source and target handle information for each edge.
 - **Node Creation Failure in New Projects**: Resolved a bug that prevented node creation in new projects due to a mismatch between the application code and the database schema for edges.
+- **Edge Rendering Issue**: Fixed edges not appearing at all by updating RLS policies to allow insertion with handle columns and ensuring React Flow receives proper handle references.
+- **Stale Callback Issue**: Wrapped `handleCreateNode` in `useCallback` with proper dependencies to prevent stale state issues with React Flow's internal memoization.
+
+### Database Changes
+- **Migration**: `20251226000001_add_nodes_metadata.sql` - Added `metadata` JSONB column to nodes table with GIN index for storing feature lists.
+- **Migration**: `20251226120000_add_handles_to_edges.sql` - Added `source_handle` and `target_handle` columns to edges table for directional connection tracking.
+- **Updated RLS Policy**: Recreated "Users can insert edges in their projects" policy to support new handle columns.
+
+### Technical Improvements
+- **Code Cleanup**: Removed unused `transformEdgeToReactFlow` function (lines 35-42 in ProjectDetail.tsx).
+- **Debug Logging**: Added comprehensive debug logging for edge creation and rendering diagnostics.
+- **Error Handling**: Improved error messages to include specific error details for better debugging.
+- **Type Safety**: Updated TypeScript interfaces to include `connectionSide` prop for FeaturesNode.
 
 ---
 

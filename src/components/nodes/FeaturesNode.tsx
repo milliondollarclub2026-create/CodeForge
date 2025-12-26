@@ -1,7 +1,7 @@
 import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
-import { CheckSquare, Plus, Pencil } from "lucide-react";
+import { CheckSquare, Plus, Pencil, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureDialog } from "@/components/FeatureDialog";
 
@@ -17,12 +17,14 @@ interface FeaturesNodeProps {
     title: string;
     features: Feature[];
     onFeaturesUpdate: (nodeId: string, features: Feature[]) => void;
+    connectionSide?: "top" | "right" | "bottom" | "left";
   };
 }
 
 export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
+  const [isHandleHovered, setIsHandleHovered] = useState(false);
 
   const openAddDialog = () => {
     setEditingFeature(null);
@@ -57,6 +59,31 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
     data.onFeaturesUpdate(data.id, updatedFeatures);
   };
 
+  // Determine handle position based on connection side
+  const connectionSide = data.connectionSide || "left";
+  const handlePosition = {
+    top: Position.Top,
+    right: Position.Right,
+    bottom: Position.Bottom,
+    left: Position.Left,
+  }[connectionSide];
+
+  // Determine handle positioning styles
+  const handleStyles = {
+    top: { top: -6, left: "50%", transform: "translateX(-50%)" },
+    right: { right: -6, top: "50%", transform: "translateY(-50%)" },
+    bottom: { bottom: -6, left: "50%", transform: "translateX(-50%)" },
+    left: { left: -6, top: "50%", transform: "translateY(-50%)" },
+  }[connectionSide];
+
+  // Determine hover zone positioning
+  const hoverZoneClasses = {
+    top: "absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-12",
+    right: "absolute -right-6 top-1/2 -translate-y-1/2 w-12 h-16",
+    bottom: "absolute -bottom-6 left-1/2 -translate-x-1/2 w-16 h-12",
+    left: "absolute -left-6 top-1/2 -translate-y-1/2 w-12 h-16",
+  }[connectionSide];
+
   return (
     <>
       <div
@@ -71,21 +98,29 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
           "shadow-blue-500/10"
         )}
       >
-        {/* Handles for connections */}
-        <Handle type="source" position={Position.Top} id="top" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
-        <Handle type="target" position={Position.Top} id="top" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
-        <Handle type="source" position={Position.Right} id="right" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
-        <Handle type="target" position={Position.Right} id="right" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
-        <Handle type="source" position={Position.Bottom} id="bottom" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
-        <Handle type="target" position={Position.Bottom} id="bottom" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
-        <Handle type="source" position={Position.Left} id="left" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
-        <Handle type="target" position={Position.Left} id="left" className="!w-3 !h-3 !bg-blue-500 !border-2 !border-slate-950" />
+        {/* Single dynamic handle with hover zone */}
+        <div
+          className={hoverZoneClasses}
+          onMouseEnter={() => setIsHandleHovered(true)}
+          onMouseLeave={() => setIsHandleHovered(false)}
+        >
+          <Handle
+            type="target"
+            position={handlePosition}
+            id={connectionSide}
+            className={cn(
+              "!w-3 !h-3 !bg-blue-500 !border-2 !border-blue-700 transition-opacity duration-200",
+              isHandleHovered ? "!opacity-100" : "!opacity-0"
+            )}
+            style={handleStyles}
+          />
+        </div>
 
         {/* Icon and Title */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
-              <CheckSquare className="w-5 h-5 text-blue-400" />
+              <Zap className="w-5 h-5 text-blue-400" />
             </div>
             <h3 className="text-base font-bold text-white leading-tight">
               {data.title}
@@ -101,8 +136,13 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
         <div className="space-y-3">
           {(data.features || []).map((feature) => (
             <div key={feature.id} className="relative group cursor-pointer p-3 rounded-md bg-slate-900/50 border border-transparent hover:border-blue-500/50 transition-colors" onClick={() => openEditDialog(feature)}>
-                <p className="font-bold text-sm text-slate-100">{feature.title}</p>
-                <p className="text-xs text-slate-400 mt-1">{feature.description}</p>
+                <div className="flex items-start gap-3">
+                  <CheckSquare className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-400" />
+                  <div>
+                    <p className="font-bold text-sm text-slate-100">{feature.title}</p>
+                    <p className="text-xs text-slate-400 mt-1">{feature.description}</p>
+                  </div>
+                </div>
                  <Pencil className="h-3 w-3 absolute top-2 right-2 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           ))}

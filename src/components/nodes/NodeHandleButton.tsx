@@ -15,10 +15,10 @@ interface NodeHandleButtonProps {
   onCreateNode: (categoryId: NodeCategoryId) => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
-  disableFeature?: boolean;
+  disabledCategories?: string[];
 }
 
-export const NodeHandleButton = ({ position, onCreateNode, onMouseEnter, onMouseLeave, disableFeature }: NodeHandleButtonProps) => {
+export const NodeHandleButton = ({ position, onCreateNode, onMouseEnter, onMouseLeave, disabledCategories }: NodeHandleButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const positionClasses = {
@@ -43,7 +43,7 @@ export const NodeHandleButton = ({ position, onCreateNode, onMouseEnter, onMouse
   } as const;
 
   const availableNodeCategories = Object.entries(NODE_CATEGORIES).filter(
-    ([key]) => !(disableFeature && key === "feature")
+    ([key]) => !disabledCategories?.includes(key)
   );
 
   return (

@@ -246,6 +246,13 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
       };
 
       // Create edge in database
+      console.log("🔍 Creating edge:", {
+        source_handle: position,
+        target_handle: oppositeHandle[position],
+        source_node_id: parentNodeId,
+        target_node_id: newNode.id,
+      });
+
       const { data: newEdge, error: edgeError } = await supabase
         .from("edges")
         .insert({
@@ -260,8 +267,15 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
         .select()
         .single();
 
+      console.log("🔍 Edge creation result:", { newEdge, edgeError });
+
       if (edgeError || !newEdge) {
-        toast.error("Failed to create connection");
+        console.error("❌ Edge creation error:", edgeError);
+
+        // Rollback: Delete the node we just created
+        await supabase.from("nodes").delete().eq("id", newNode.id);
+
+        toast.error(`Failed to create connection: ${edgeError?.message || "Unknown error"}`);
         return;
       }
 
@@ -280,6 +294,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
               title: newNode.title,
               features: [],
               onFeaturesUpdate: handleFeaturesUpdate,
+              connectionSide: oppositeHandle[position],
             }
           : {
               id: newNode.id,
@@ -300,16 +315,26 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
         target: newNode.id,
         sourceHandle: newEdge.source_handle || undefined,
         targetHandle: newEdge.target_handle || undefined,
-        type: isFeatureNode ? "step" : "default",
+        type: isFeatureNode ? "smoothstep" : "default",
         animated: isFeatureNode,
         style: isFeatureNode ? {
           strokeDasharray: "5,5",
           stroke: "#3b82f6",
+          strokeWidth: 2,
         } : undefined,
       };
 
+      console.log("🔍 React Flow Edge object:", reactFlowEdge);
+      console.log("🔍 Is Feature Node:", isFeatureNode);
+      console.log("🔍 Parent Node ID:", parentNodeId);
+      console.log("🔍 New Node ID:", newNode.id);
+
       setNodes((prevNodes) => [...prevNodes, reactFlowNode]);
-      setEdges((prevEdges) => [...prevEdges, reactFlowEdge]);
+      setEdges((prevEdges) => {
+        const newEdges = [...prevEdges, reactFlowEdge];
+        console.log("🔍 All edges after adding:", newEdges);
+        return newEdges;
+      });
 
       toast.success(`${NODE_CATEGORIES[categoryId].name} node created`);
     } catch (error) {
@@ -392,6 +417,17 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
         (categoriesData || []).map((cat) => [cat.id, cat.name])
       );
 
+      // Create a map of parent IDs to their child nodes
+      const parentToChildrenMap = new Map<string, any[]>();
+      (nodesData || []).forEach(node => {
+        if (node.parent_node_id) {
+          if (!parentToChildrenMap.has(node.parent_node_id)) {
+            parentToChildrenMap.set(node.parent_node_id, []);
+          }
+          parentToChildrenMap.get(node.parent_node_id)!.push(node);
+        }
+      });
+
       // Transform nodes to React Flow format WITH project description for root nodes
       const flowNodes = (nodesData || []).map(node => {
         const isRoot = node.parent_node_id === null;
@@ -413,6 +449,10 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
             console.error("Failed to parse metadata:", e);
           }
 
+          // Find the edge connecting to this feature node to get connection side
+          const incomingEdge = edgesData?.find(e => e.target_node_id === node.id);
+          const connectionSide = incomingEdge?.target_handle || "left";
+
           return {
             id: node.id,
             type: "features",
@@ -422,9 +462,14 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
               title: node.title,
               features,
               onFeaturesUpdate: handleFeaturesUpdate,
+              connectionSide,
             },
           };
         }
+
+        // Get child categories for the current node
+        const children = parentToChildrenMap.get(node.id) || [];
+        const childCategoryNames = children.map(child => categoryMap.get(child.category_id)).filter(Boolean);
 
         return {
           id: node.id,
@@ -439,6 +484,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
             status: node.status,
             isRoot,
             onCreateNode: handleCreateNode,
+            childCategoryNames,
           },
         };
       });
@@ -456,12 +502,13 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           target: edge.target_node_id,
           sourceHandle: edge.source_handle || undefined,
           targetHandle: edge.target_handle || undefined,
-          type: isFeatureEdge ? "step" : "default",
+          type: isFeatureEdge ? "smoothstep" : "default",
           label: edge.label || undefined,
           animated: isFeatureEdge,
           style: isFeatureEdge ? {
             strokeDasharray: "5,5",
             stroke: "#3b82f6",
+            strokeWidth: 2,
           } : undefined,
         };
       });
