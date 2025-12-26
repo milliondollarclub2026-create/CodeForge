@@ -3,7 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Plus, Minus, Hand, Pencil } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ArrowLeft, LogOut, Plus, Minus, Hand, Pencil, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
   ReactFlow,
@@ -24,6 +29,8 @@ import { FeaturesNode } from "@/components/nodes/FeaturesNode";
 import { TechStackNode } from "@/components/nodes/TechStackNode";
 import { AddDatabaseEntityModal } from "@/components/AddDatabaseEntityModal";
 import { EditDatabaseEntityModal } from "@/components/EditDatabaseEntityModal";
+import { AddUserFlowModal } from "@/components/AddUserFlowModal";
+import { EditUserFlowModal } from "@/components/EditUserFlowModal";
 import { NODE_CATEGORIES, type NodeCategoryId } from "@/lib/nodeCategories";
 
 interface Project {
@@ -135,6 +142,12 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
   const [editDatabaseEntityModalOpen, setEditDatabaseEntityModalOpen] = useState(false);
   const [selectedDatabaseNode, setSelectedDatabaseNode] = useState<any>(null);
   const [databaseParentNode, setDatabaseParentNode] = useState<any>(null);
+
+  // User flow modal state
+  const [addUserFlowModalOpen, setAddUserFlowModalOpen] = useState(false);
+  const [editUserFlowModalOpen, setEditUserFlowModalOpen] = useState(false);
+  const [selectedUserFlowNode, setSelectedUserFlowNode] = useState<any>(null);
+  const [userFlowParentNode, setUserFlowParentNode] = useState<any>(null);
 
   const nodeTypes = useMemo(() => ({
     custom: CustomNode,
@@ -249,6 +262,38 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
     }
   };
 
+  // Handler for editing user flow
+  const handleEditUserFlow = (node: any) => {
+    setSelectedUserFlowNode(node);
+    setEditUserFlowModalOpen(true);
+  };
+
+  // Handler for deleting user flow
+  const handleDeleteUserFlow = async (node: any) => {
+    if (!confirm(`Are you sure you want to delete the user flow "${node.title}"?`)) {
+      return;
+    }
+
+    try {
+      // Delete the node (edges will cascade delete)
+      const { error } = await supabase
+        .from("nodes")
+        .delete()
+        .eq("id", node.id);
+
+      if (error) throw error;
+
+      // Remove from React Flow state
+      setNodes((nds) => nds.filter((n) => n.id !== node.id));
+      setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+
+      toast.success(`User flow "${node.title}" deleted`);
+    } catch (error) {
+      console.error("Error deleting user flow:", error);
+      toast.error("Failed to delete user flow");
+    }
+  };
+
   const handleCreateNode = useCallback(async (
     parentNodeId: string,
     categoryId: NodeCategoryId,
@@ -270,6 +315,13 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
       if (categoryId === "database") {
         setDatabaseParentNode(parentNode);
         setAddDatabaseEntityModalOpen(true);
+        return;
+      }
+
+      // Special handling for user flows - open modal instead of creating directly
+      if (categoryId === "user_flows") {
+        setUserFlowParentNode(parentNode);
+        setAddUserFlowModalOpen(true);
         return;
       }
 
@@ -417,7 +469,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           : isTechStackNode
           ? {
               strokeDasharray: "5,5",
-              stroke: "#a855f7",
+              stroke: "#f59e0b",
               strokeWidth: 2,
             }
           : undefined,
@@ -625,18 +677,21 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
             metadata: (node as any).metadata,
             onEditDatabaseEntity: handleEditDatabaseEntity,
             onDeleteDatabaseEntity: handleDeleteDatabaseEntity,
+            onEditUserFlow: handleEditUserFlow,
+            onDeleteUserFlow: handleDeleteUserFlow,
           },
         };
       });
 
-      // Transform edges to React Flow format with special styling for feature, tech stack, and database edges
+      // Transform edges to React Flow format with special styling for feature, tech stack, database, and user flow edges
       const flowEdges = (edgesData || []).map(edge => {
-        // Check if target is a feature, tech stack, or database node
+        // Check if target is a feature, tech stack, database, or user flow node
         const targetNode = nodesData?.find(n => n.id === edge.target_node_id);
         const targetCategoryName = targetNode ? categoryMap.get(targetNode.category_id) : null;
         const isFeatureEdge = targetCategoryName === "feature";
         const isTechStackEdge = targetCategoryName === "tech_stack";
         const isDatabaseEdge = targetCategoryName === "database";
+        const isUserFlowEdge = targetCategoryName === "user_flows";
 
         return {
           id: edge.id,
@@ -644,9 +699,9 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           target: edge.target_node_id,
           sourceHandle: edge.source_handle || undefined,
           targetHandle: edge.target_handle || undefined,
-          type: isFeatureEdge || isTechStackEdge || isDatabaseEdge ? "smoothstep" : "default",
+          type: isFeatureEdge || isTechStackEdge || isDatabaseEdge || isUserFlowEdge ? "smoothstep" : "default",
           label: edge.label || undefined,
-          animated: isFeatureEdge || isTechStackEdge || isDatabaseEdge,
+          animated: isFeatureEdge || isTechStackEdge || isDatabaseEdge || isUserFlowEdge,
           style: isFeatureEdge
             ? {
                 strokeDasharray: "5,5",
@@ -656,13 +711,19 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
             : isTechStackEdge
             ? {
                 strokeDasharray: "5,5",
-                stroke: "#a855f7",
+                stroke: "#f59e0b",
                 strokeWidth: 2,
               }
             : isDatabaseEdge
             ? {
                 strokeDasharray: "5,5",
                 stroke: "#ec4899",
+                strokeWidth: 2,
+              }
+            : isUserFlowEdge
+            ? {
+                strokeDasharray: "5,5",
+                stroke: "#a855f7",
                 strokeWidth: 2,
               }
             : undefined,
@@ -742,6 +803,28 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
 
         {/* Custom Controls */}
         <CustomControls />
+
+        {/* Generate Project PRD Button */}
+        <Panel position="bottom-center" className="m-4">
+          <Button className="bg-red-600 hover:bg-red-700 text-white shadow-lg">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Generate Project PRD
+          </Button>
+        </Panel>
+
+        {/* View PRDs Icon */}
+        <Panel position="top-left" className="m-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <FileText className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>View your PRDs</p>
+            </TooltipContent>
+          </Tooltip>
+        </Panel>
       </ReactFlow>
 
       {/* Add Database Entity Modal */}
@@ -808,6 +891,88 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           }}
           projectId={projectId}
           node={selectedDatabaseNode}
+          onNodeUpdated={(updatedNode) => {
+            // Update node in React Flow state
+            setNodes(prev => prev.map(n =>
+              n.id === updatedNode.id
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      title: updatedNode.title,
+                      metadata: updatedNode.metadata
+                    }
+                  }
+                : n
+            ));
+          }}
+        />
+      )}
+
+      {/* Add User Flow Modal */}
+      {userFlowParentNode && (
+        <AddUserFlowModal
+          isOpen={addUserFlowModalOpen}
+          onClose={() => {
+            setAddUserFlowModalOpen(false);
+            setUserFlowParentNode(null);
+          }}
+          projectId={projectId}
+          parentNodeId={userFlowParentNode.id}
+          parentPosition={userFlowParentNode.position}
+          onNodeCreated={(node) => {
+            // Get user_flows category for node data
+            const userFlowsCategory = { id: node.category_id, name: 'user_flows' };
+
+            // Add node to React Flow state
+            setNodes(prev => [...prev, {
+              id: node.id,
+              type: 'custom',
+              position: { x: node.position_x, y: node.position_y },
+              data: {
+                id: node.id,
+                title: node.title,
+                description: null,
+                category_id: node.category_id,
+                priority: node.priority,
+                status: node.status,
+                isRoot: false,
+                onCreateNode: handleCreateNode,
+                childCategoryNames: [],
+                category: userFlowsCategory,
+                metadata: node.metadata,
+                onEditUserFlow: handleEditUserFlow,
+                onDeleteUserFlow: handleDeleteUserFlow,
+              }
+            }]);
+
+            // Add edge with purple dotted styling
+            setEdges(prev => [...prev, {
+              id: `${userFlowParentNode.id}-${node.id}`,
+              source: userFlowParentNode.id,
+              target: node.id,
+              type: 'smoothstep',
+              animated: true,
+              style: {
+                strokeDasharray: "5,5",
+                stroke: "#a855f7",
+                strokeWidth: 2,
+              }
+            }]);
+          }}
+        />
+      )}
+
+      {/* Edit User Flow Modal */}
+      {selectedUserFlowNode && (
+        <EditUserFlowModal
+          isOpen={editUserFlowModalOpen}
+          onClose={() => {
+            setEditUserFlowModalOpen(false);
+            setSelectedUserFlowNode(null);
+          }}
+          projectId={projectId}
+          node={selectedUserFlowNode}
           onNodeUpdated={(updatedNode) => {
             // Update node in React Flow state
             setNodes(prev => prev.map(n =>
@@ -1067,4 +1232,3 @@ const ProjectDetail = () => {
 };
 
 export default ProjectDetail;
-

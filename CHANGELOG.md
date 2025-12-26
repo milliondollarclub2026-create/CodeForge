@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - 2025-12-26
 
 ### Added
+- **User Flows Node System**: Introduced comprehensive user flow documentation system for tracking step-by-step user interactions:
+  - **Flow Name** - Track the name of the user flow (e.g., "User Signup Flow", "Product Purchase")
+  - **Description** - Required field describing the purpose of the flow (10-500 chars)
+  - **Start State** - Where the flow begins (e.g., "Homepage", "Login page")
+  - **End State** - Where the flow ends (e.g., "Dashboard", "Order confirmation")
+  - **Steps** - Dynamic array of flow steps with minimum 2 steps required
+  - **Notes** - Optional freeform field for error handling, alternative paths, and implementation details
+- **AddUserFlowModal Component**: Created comprehensive form modal with:
+  - Flow name, description, start state, and end state fields
+  - Dynamic steps array with Add/Remove functionality (minimum 2 steps enforced)
+  - Numbered step display with "Step 1", "Step 2", etc. labels
+  - Trash button for removing steps (hidden when only 2 steps remain)
+  - Freeform notes textarea for complex flow details (up to 2000 chars)
+  - Zod validation schema with inline error messages
+  - Intelligent sibling positioning (250px horizontal spacing)
+  - Purple theme styling (#a855f7) throughout
+- **EditUserFlowModal Component**: Built edit modal with:
+  - Pre-population of all fields from existing user flow
+  - Same dynamic steps management as add modal
+  - Same validation and error handling
+  - Inline delete button functionality removed (delete on node itself)
+- **User Flow Node Display**: Enhanced CustomNode to render user flows with:
+  - Purple border (#a855f7) to distinguish from other node types
+  - GitBranch icon in header
+  - Step count badge showing total number of steps
+  - Start and End state display
+  - First 2 steps preview with "... and X more" indicator
+  - Notes preview section with 3-line clamp and monospace font
+  - Hover tooltip showing full description and all numbered steps
+  - Edit and Delete action buttons with proper styling
+- **User Flow Data Persistence**: Flow metadata saved to nodes.metadata JSONB column with fields: flow_name, description, start_state, end_state, steps array, notes
+- **User Flow Edge Styling**: Animated purple dashed edges (#a855f7) with smooth step routing for user flow connections
 - **Database Entity Node System**: Introduced simple, non-overwhelming database schema definition system for AI coding tools:
   - **Entity Name** - Track database table/collection names with auto-capitalization
   - **Description** - Required field describing what data the entity stores (10-500 chars)
@@ -63,13 +95,15 @@ All notable changes to this project will be documented in this file.
 - **Edge Creation Rollback**: If edge creation fails, the newly created node is automatically deleted from the database to maintain data integrity.
 
 ### Changed
-- **CustomNode Interface Extension**: Added optional fields for database entities: category, metadata, onEditDatabaseEntity, onDeleteDatabaseEntity
+- **CustomNode Interface Extension**: Added optional fields for database entities and user flows: category, metadata, onEditDatabaseEntity, onDeleteDatabaseEntity, onEditUserFlow, onDeleteUserFlow
 - **ProjectDetail Node Transformation**: Enhanced node data to include category object and metadata for all custom nodes
 - **Database Entity Handlers**: Integrated edit and delete handlers into ProjectDetail canvas component
-- **Modal State Management**: Added state variables for database entity modals (add and edit)
+- **Modal State Management**: Added state variables for database entity and user flow modals (add and edit)
+- **User Flow Handlers**: Integrated edit and delete handlers for user flows into ProjectDetail canvas component
+- **handleCreateNode Enhancement**: Added special handling for user_flows category to open modal instead of creating directly
 - **Tech Stack Node Registration**: Added TechStackNode to React Flow node types registry as "techStack" type
 - **Project Detail State Management**: Extended handleCreateNode callback dependencies to include handleTechStackUpdate
-- **Edge Loading Logic**: Updated edge transformation to detect and style tech stack edges with purple color
+- **Edge Loading Logic**: Updated edge transformation to detect and style tech stack, database, and user flow edges with appropriate colors
 - **Node Loading Logic**: Enhanced node parsing to handle tech_stack category with metadata deserialization
 - **Features Node Styling**: The 'Features' node now renders with a dark background and a blue border to distinguish it visually. Its default title is now "Features" instead of "New Features".
 - **Edge Connection Specificity**: Edges created between nodes now connect to the specific handle point (+ icon) that was clicked, rather than a default position.
@@ -90,11 +124,15 @@ All notable changes to this project will be documented in this file.
 - **Updated RLS Policy**: Recreated "Users can insert edges in their projects" policy to support new handle columns.
 
 ### Technical Improvements
+- **User Flow Form Validation**: Implemented comprehensive Zod schema for user flows with character limits, minimum steps validation, and array item validation
+- **Dynamic Steps Array Management**: Built add/remove step functionality with minimum 2 steps enforcement and numbered display
+- **Step Count Badge**: Integrated Badge component to display total step count in user flow nodes
+- **Tooltip Enhancement**: Extended tooltip integration to display all numbered steps for user flows
 - **Database Entity Form Validation**: Implemented comprehensive Zod schema with regex pattern matching for entity names, character limits, and required field validation
 - **Security Model UX**: Created radio group cards with icons (Globe, Lock, Users) for intuitive security selection
-- **Sibling Node Positioning**: Intelligent horizontal spacing algorithm for multiple database entities (250px apart)
-- **Tooltip Integration**: Added shadcn/ui Tooltip component to CustomNode for database entity detail display
-- **Delete Confirmation**: Native browser confirm dialog for database entity deletion with cascade delete handling
+- **Sibling Node Positioning**: Intelligent horizontal spacing algorithm for multiple database entities and user flows (250px apart)
+- **Tooltip Integration**: Added shadcn/ui Tooltip component to CustomNode for database entity and user flow detail display
+- **Delete Confirmation**: Native browser confirm dialog for database entity and user flow deletion with cascade delete handling
 - **TypeScript Type Safety**: Created shared TechCategory and TechStackEntry types exported from AddTechStackModal
 - **Form Validation**: Implemented conditional required field validation based on selected tech category
 - **Reusable Modal Components**: Built AddTechStackModal and EditTechStackModal with consistent UX patterns

@@ -150,8 +150,8 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
           "will-change-transform transform-gpu antialiased",
           "[text-rendering:optimizeLegibility]",
           "bg-slate-950",
-          "border-purple-500",
-          "shadow-purple-500/10"
+          "border-amber-500",
+          "shadow-amber-500/10"
         )}
       >
         {/* Single dynamic handle with hover zone */}
@@ -165,7 +165,7 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
             position={handlePosition}
             id={connectionSide}
             className={cn(
-              "!w-3 !h-3 !bg-purple-500 !border-2 !border-purple-700 transition-opacity duration-200",
+              "!w-3 !h-3 !bg-amber-500 !border-2 !border-amber-700 transition-opacity duration-200",
               isHandleHovered ? "!opacity-100" : "!opacity-0"
             )}
             style={handleStyles}
@@ -175,8 +175,8 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
         {/* Icon and Title */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
-              <Server className="w-5 h-5 text-purple-400" />
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+              <Server className="w-5 h-5 text-amber-400" />
             </div>
             <h3 className="text-base font-bold text-white leading-tight">
               {data.title}
@@ -185,7 +185,7 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
           <Button
             onClick={openAddDialog}
             size="sm"
-            className="h-9 bg-purple-600 hover:bg-purple-700 text-white"
+            className="h-9 bg-amber-600 hover:bg-amber-700 text-white"
           >
             <Plus className="h-4 w-4 mr-1" />
             Add Tech
@@ -199,11 +199,11 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
             return (
               <div
                 key={entry.id}
-                className="relative group cursor-pointer p-3 rounded-md bg-slate-900/50 border border-transparent hover:border-purple-500/50 transition-colors"
+                className="relative group cursor-pointer p-3 rounded-md bg-slate-900/50 border border-transparent hover:border-amber-500/50 transition-colors"
                 onClick={() => openEditDialog(entry)}
               >
                 <div className="flex items-start gap-3">
-                  <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-purple-400" />
+                  <Icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-400" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-bold text-sm text-slate-100">{entry.name}</p>
@@ -218,7 +218,7 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
                     )}
                   </div>
                 </div>
-                <Pencil className="h-3 w-3 absolute top-2 right-2 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Pencil className="h-3 w-3 absolute top-2 right-2 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             );
           })}

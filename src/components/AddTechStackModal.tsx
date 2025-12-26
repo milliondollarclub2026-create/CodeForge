@@ -409,7 +409,7 @@ export const AddTechStackModal = ({
             type="button"
             onClick={handleSave}
             disabled={!isFormValid()}
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Add to Tech Stack
           </Button>
