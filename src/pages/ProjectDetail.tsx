@@ -21,6 +21,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import { CustomNode } from "@/components/nodes/CustomNode";
 import { FeaturesNode } from "@/components/nodes/FeaturesNode";
+import { TechStackNode } from "@/components/nodes/TechStackNode";
+import { AddDatabaseEntityModal } from "@/components/AddDatabaseEntityModal";
+import { EditDatabaseEntityModal } from "@/components/EditDatabaseEntityModal";
 import { NODE_CATEGORIES, type NodeCategoryId } from "@/lib/nodeCategories";
 
 interface Project {
@@ -127,9 +130,16 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
   const { setCenter, getNode } = useReactFlow();
   const hasCentered = useRef(false);
 
+  // Database entity modal state
+  const [addDatabaseEntityModalOpen, setAddDatabaseEntityModalOpen] = useState(false);
+  const [editDatabaseEntityModalOpen, setEditDatabaseEntityModalOpen] = useState(false);
+  const [selectedDatabaseNode, setSelectedDatabaseNode] = useState<any>(null);
+  const [databaseParentNode, setDatabaseParentNode] = useState<any>(null);
+
   const nodeTypes = useMemo(() => ({
     custom: CustomNode,
-    features: FeaturesNode
+    features: FeaturesNode,
+    techStack: TechStackNode
   }), []);
 
   const calculateChildPosition = (
@@ -180,6 +190,65 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
     }
   };
 
+  const handleTechStackUpdate = async (nodeId: string, techStack: any[]) => {
+    // Update the local node data first for immediate UI feedback
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, techStack } }
+          : node
+      )
+    );
+
+    // Then, save the updated tech stack to the database
+    try {
+      const { error } = await supabase
+        .from("nodes")
+        .update({ metadata: { techStack } })
+        .eq("id", nodeId);
+
+      if (error) {
+        toast.error("Failed to save tech stack.");
+        console.error("Error updating tech stack:", error);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred while saving tech stack.");
+      console.error("Catch block error updating tech stack:", error);
+    }
+  };
+
+  // Handler for editing database entity
+  const handleEditDatabaseEntity = (node: any) => {
+    setSelectedDatabaseNode(node);
+    setEditDatabaseEntityModalOpen(true);
+  };
+
+  // Handler for deleting database entity
+  const handleDeleteDatabaseEntity = async (node: any) => {
+    if (!confirm(`Are you sure you want to delete the database entity "${node.title}"?`)) {
+      return;
+    }
+
+    try {
+      // Delete the node (edges will cascade delete)
+      const { error } = await supabase
+        .from("nodes")
+        .delete()
+        .eq("id", node.id);
+
+      if (error) throw error;
+
+      // Remove from React Flow state
+      setNodes((nds) => nds.filter((n) => n.id !== node.id));
+      setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+
+      toast.success(`Database entity "${node.title}" deleted`);
+    } catch (error) {
+      console.error("Error deleting database entity:", error);
+      toast.error("Failed to delete database entity");
+    }
+  };
+
   const handleCreateNode = useCallback(async (
     parentNodeId: string,
     categoryId: NodeCategoryId,
@@ -191,9 +260,16 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
 
       // Get parent node for position calculation using the hook to avoid stale state
       const parentNode = getNode(parentNodeId);
-      
+
       if (!parentNode) {
         toast.error("Parent node not found");
+        return;
+      }
+
+      // Special handling for database entities - open modal instead of creating directly
+      if (categoryId === "database") {
+        setDatabaseParentNode(parentNode);
+        setAddDatabaseEntityModalOpen(true);
         return;
       }
 
@@ -211,9 +287,11 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
 
       // Calculate position
       const newPosition = calculateChildPosition(parentNode, position);
-      
-      const title = categoryId === "feature" 
-        ? "Features" 
+
+      const title = categoryId === "feature"
+        ? "Features"
+        : categoryId === "tech_stack"
+        ? "Tech Stack"
         : `New ${NODE_CATEGORIES[categoryId].name}`;
 
       // Create node in database
@@ -280,8 +358,13 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
       }
 
       // Determine node type based on category
-      const nodeType = categoryId === "feature" ? "features" : "custom";
+      const nodeType = categoryId === "feature"
+        ? "features"
+        : categoryId === "tech_stack"
+        ? "techStack"
+        : "custom";
       const isFeatureNode = categoryId === "feature";
+      const isTechStackNode = categoryId === "tech_stack";
 
       // Optimistic update: Add node to canvas
       const reactFlowNode: Node = {
@@ -294,6 +377,14 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
               title: newNode.title,
               features: [],
               onFeaturesUpdate: handleFeaturesUpdate,
+              connectionSide: oppositeHandle[position],
+            }
+          : isTechStackNode
+          ? {
+              id: newNode.id,
+              title: newNode.title,
+              techStack: [],
+              onTechStackUpdate: handleTechStackUpdate,
               connectionSide: oppositeHandle[position],
             }
           : {
@@ -315,13 +406,21 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
         target: newNode.id,
         sourceHandle: newEdge.source_handle || undefined,
         targetHandle: newEdge.target_handle || undefined,
-        type: isFeatureNode ? "smoothstep" : "default",
-        animated: isFeatureNode,
-        style: isFeatureNode ? {
-          strokeDasharray: "5,5",
-          stroke: "#3b82f6",
-          strokeWidth: 2,
-        } : undefined,
+        type: isFeatureNode || isTechStackNode ? "smoothstep" : "default",
+        animated: isFeatureNode || isTechStackNode,
+        style: isFeatureNode
+          ? {
+              strokeDasharray: "5,5",
+              stroke: "#3b82f6",
+              strokeWidth: 2,
+            }
+          : isTechStackNode
+          ? {
+              strokeDasharray: "5,5",
+              stroke: "#a855f7",
+              strokeWidth: 2,
+            }
+          : undefined,
       };
 
       console.log("🔍 React Flow Edge object:", reactFlowEdge);
@@ -341,7 +440,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
       console.error("Error creating node:", error);
       toast.error("An unexpected error occurred");
     }
-  }, [projectId, setNodes, setEdges, handleFeaturesUpdate, getNode]);
+  }, [projectId, setNodes, setEdges, handleFeaturesUpdate, handleTechStackUpdate, getNode]);
 
   const handleNodeDragStop = async (event: any, node: Node) => {
     // Save new position to database for all nodes (including root)
@@ -433,6 +532,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
         const isRoot = node.parent_node_id === null;
         const categoryName = categoryMap.get(node.category_id);
         const isFeatureNode = categoryName === "feature";
+        const isTechStackNode = categoryName === "tech_stack";
 
         if (isFeatureNode) {
           // Parse metadata field - it may be stored as JSON string or object
@@ -467,9 +567,45 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           };
         }
 
+        if (isTechStackNode) {
+          // Parse metadata field for tech stack
+          let techStack = [];
+          try {
+            const metadata = (node as any).metadata;
+            if (typeof metadata === 'string') {
+              const parsed = JSON.parse(metadata);
+              techStack = parsed?.techStack || [];
+            } else if (metadata && typeof metadata === 'object') {
+              techStack = metadata.techStack || [];
+            }
+          } catch (e) {
+            console.error("Failed to parse tech stack metadata:", e);
+          }
+
+          // Find the edge connecting to this tech stack node to get connection side
+          const incomingEdge = edgesData?.find(e => e.target_node_id === node.id);
+          const connectionSide = incomingEdge?.target_handle || "left";
+
+          return {
+            id: node.id,
+            type: "techStack",
+            position: { x: node.position_x, y: node.position_y },
+            data: {
+              id: node.id,
+              title: node.title,
+              techStack,
+              onTechStackUpdate: handleTechStackUpdate,
+              connectionSide,
+            },
+          };
+        }
+
         // Get child categories for the current node
         const children = parentToChildrenMap.get(node.id) || [];
         const childCategoryNames = children.map(child => categoryMap.get(child.category_id)).filter(Boolean);
+
+        // Get category details
+        const category = categoriesData?.find(c => c.id === node.category_id);
 
         return {
           id: node.id,
@@ -485,16 +621,22 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
             isRoot,
             onCreateNode: handleCreateNode,
             childCategoryNames,
+            category: category ? { id: category.id, name: category.name } : undefined,
+            metadata: (node as any).metadata,
+            onEditDatabaseEntity: handleEditDatabaseEntity,
+            onDeleteDatabaseEntity: handleDeleteDatabaseEntity,
           },
         };
       });
 
-      // Transform edges to React Flow format with special styling for feature edges
+      // Transform edges to React Flow format with special styling for feature, tech stack, and database edges
       const flowEdges = (edgesData || []).map(edge => {
-        // Check if target is a feature node
+        // Check if target is a feature, tech stack, or database node
         const targetNode = nodesData?.find(n => n.id === edge.target_node_id);
         const targetCategoryName = targetNode ? categoryMap.get(targetNode.category_id) : null;
         const isFeatureEdge = targetCategoryName === "feature";
+        const isTechStackEdge = targetCategoryName === "tech_stack";
+        const isDatabaseEdge = targetCategoryName === "database";
 
         return {
           id: edge.id,
@@ -502,14 +644,28 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           target: edge.target_node_id,
           sourceHandle: edge.source_handle || undefined,
           targetHandle: edge.target_handle || undefined,
-          type: isFeatureEdge ? "smoothstep" : "default",
+          type: isFeatureEdge || isTechStackEdge || isDatabaseEdge ? "smoothstep" : "default",
           label: edge.label || undefined,
-          animated: isFeatureEdge,
-          style: isFeatureEdge ? {
-            strokeDasharray: "5,5",
-            stroke: "#3b82f6",
-            strokeWidth: 2,
-          } : undefined,
+          animated: isFeatureEdge || isTechStackEdge || isDatabaseEdge,
+          style: isFeatureEdge
+            ? {
+                strokeDasharray: "5,5",
+                stroke: "#3b82f6",
+                strokeWidth: 2,
+              }
+            : isTechStackEdge
+            ? {
+                strokeDasharray: "5,5",
+                stroke: "#a855f7",
+                strokeWidth: 2,
+              }
+            : isDatabaseEdge
+            ? {
+                strokeDasharray: "5,5",
+                stroke: "#ec4899",
+                strokeWidth: 2,
+              }
+            : undefined,
         };
       });
 
@@ -551,41 +707,125 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
   }
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={() => {}}
-      onNodeDragStop={handleNodeDragStop}
-      // Pan & Zoom Configuration
-      panOnDrag={true}
-      zoomOnScroll={true}
-      panOnScroll={false}
-      minZoom={0.1} // 10% minimum zoom
-      maxZoom={4} // 400% maximum zoom
-      defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-      // Interactive mode - nodes can be dragged and selected
-      nodesDraggable={true}
-      nodesConnectable={false}
-      elementsSelectable={true}
-      className="bg-background"
-    >
-      {/* Dot Grid Background */}
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={20} // 20px spacing
-        size={1} // 1px dot radius
-        color="hsl(var(--border))" // Theme color
-      />
+    <>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={() => {}}
+        onNodeDragStop={handleNodeDragStop}
+        // Pan & Zoom Configuration
+        panOnDrag={true}
+        zoomOnScroll={true}
+        panOnScroll={false}
+        minZoom={0.1} // 10% minimum zoom
+        maxZoom={4} // 400% maximum zoom
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+        // Interactive mode - nodes can be dragged and selected
+        nodesDraggable={true}
+        nodesConnectable={false}
+        elementsSelectable={true}
+        className="bg-background"
+      >
+        {/* Dot Grid Background */}
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20} // 20px spacing
+          size={1} // 1px dot radius
+          color="hsl(var(--border))" // Theme color
+        />
 
-      {/* Arrow Key Panning */}
-      <ArrowKeyPanner />
+        {/* Arrow Key Panning */}
+        <ArrowKeyPanner />
 
-      {/* Custom Controls */}
-      <CustomControls />
-    </ReactFlow>
+        {/* Custom Controls */}
+        <CustomControls />
+      </ReactFlow>
+
+      {/* Add Database Entity Modal */}
+      {databaseParentNode && (
+        <AddDatabaseEntityModal
+          isOpen={addDatabaseEntityModalOpen}
+          onClose={() => {
+            setAddDatabaseEntityModalOpen(false);
+            setDatabaseParentNode(null);
+          }}
+          projectId={projectId}
+          parentNodeId={databaseParentNode.id}
+          parentPosition={databaseParentNode.position}
+          onNodeCreated={(node) => {
+            // Get database category for node data
+            const databaseCategory = { id: node.category_id, name: 'database' };
+
+            // Add node to React Flow state
+            setNodes(prev => [...prev, {
+              id: node.id,
+              type: 'custom',
+              position: { x: node.position_x, y: node.position_y },
+              data: {
+                id: node.id,
+                title: node.title,
+                description: null,
+                category_id: node.category_id,
+                priority: node.priority,
+                status: node.status,
+                isRoot: false,
+                onCreateNode: handleCreateNode,
+                childCategoryNames: [],
+                category: databaseCategory,
+                metadata: node.metadata,
+                onEditDatabaseEntity: handleEditDatabaseEntity,
+                onDeleteDatabaseEntity: handleDeleteDatabaseEntity,
+              }
+            }]);
+
+            // Add edge with pink dotted styling
+            setEdges(prev => [...prev, {
+              id: `${databaseParentNode.id}-${node.id}`,
+              source: databaseParentNode.id,
+              target: node.id,
+              type: 'smoothstep',
+              animated: true,
+              style: {
+                strokeDasharray: "5,5",
+                stroke: "#ec4899",
+                strokeWidth: 2,
+              }
+            }]);
+          }}
+        />
+      )}
+
+      {/* Edit Database Entity Modal */}
+      {selectedDatabaseNode && (
+        <EditDatabaseEntityModal
+          isOpen={editDatabaseEntityModalOpen}
+          onClose={() => {
+            setEditDatabaseEntityModalOpen(false);
+            setSelectedDatabaseNode(null);
+          }}
+          projectId={projectId}
+          node={selectedDatabaseNode}
+          onNodeUpdated={(updatedNode) => {
+            // Update node in React Flow state
+            setNodes(prev => prev.map(n =>
+              n.id === updatedNode.id
+                ? {
+                    ...n,
+                    data: {
+                      ...n.data,
+                      title: updatedNode.title,
+                      metadata: updatedNode.metadata
+                    }
+                  }
+                : n
+            ));
+          }}
+        />
+      )}
+    </>
   );
 };
 

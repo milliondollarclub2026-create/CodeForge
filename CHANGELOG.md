@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased] - 2025-12-26
 
 ### Added
+- **Database Entity Node System**: Introduced simple, non-overwhelming database schema definition system for AI coding tools:
+  - **Entity Name** - Track database table/collection names with auto-capitalization
+  - **Description** - Required field describing what data the entity stores (10-500 chars)
+  - **Security Model** - Three options: Public Access, Owner Only (default), Authenticated Users
+  - **Notes** - Optional freeform field for relationships, fields, constraints, and implementation details
+- **AddDatabaseEntityModal Component**: Created comprehensive form modal with:
+  - Entity name validation (must start with letter, letters/numbers/underscores only)
+  - Description field with character count validation
+  - Radio group security model selector with visual cards and icons
+  - Freeform notes textarea for complex requirements (up to 2000 chars)
+  - Zod schema validation with inline error messages
+  - Intelligent sibling positioning (250px horizontal spacing)
+- **EditDatabaseEntityModal Component**: Built edit modal with:
+  - Pre-population of all fields from existing entity
+  - Same validation as add modal
+  - Inline delete button functionality removed (delete on node itself)
+- **Database Entity Node Display**: Enhanced CustomNode to render database entities with:
+  - Pink border (#ec4899) to distinguish from other node types
+  - Database icon in header
+  - 2-line description with ellipsis truncation
+  - Color-coded security badges (green for Public, blue for Owner Only, orange for Authenticated)
+  - Notes preview section with 3-line clamp and monospace font
+  - Hover tooltip showing full entity details including complete notes
+  - Edit and Delete action buttons with proper styling
+- **Database Entity Data Persistence**: Entity metadata saved to nodes.metadata JSONB column with fields: entity_name, description, security_model, notes
+- **Tech Stack Node System**: Introduced comprehensive tech stack management with 6 specialized categories:
+  - **Core Language** - Track programming languages with version and type system
+  - **Frontend Framework** - Manage frontend frameworks with version, state management, and styling approach
+  - **Backend Framework** - Document backend frameworks with version and ORM
+  - **External Service** - Record external services with provider and purpose
+  - **Dev Tool** - Organize development tools by category (linting, testing, CI/CD, etc.) and purpose
+  - **Third-Party API** - Track third-party APIs with provider, purpose, and authentication method
+- **AddTechStackModal Component**: Created modal with category selector and conditional form fields based on selected category
+- **EditTechStackModal Component**: Built edit modal with delete functionality and same conditional field structure
+- **TechStackNode Component**: Developed specialized node for displaying tech stack entries with:
+  - Purple theme styling to distinguish from Features nodes
+  - Category-specific icons (Code2, Monitor, Server, Cloud, Wrench, Plug)
+  - Dynamic single handle based on connection side (similar to Features node)
+  - Hover-to-reveal handle functionality
+  - Badge display showing category type for each entry
+  - Detailed information display based on category-specific fields
+- **Tech Stack Edge Styling**: Animated purple dashed edges (#a855f7) with smooth step routing for tech stack connections
+- **Tech Stack Data Persistence**: Tech stack entries saved to nodes.metadata JSONB column with automatic sync to database
 - **Interactive Features Node**: Introduced a new node type called 'Features'. This node allows users to dynamically add, view, and remove a list of feature items directly on the canvas.
 - **One-per-project limit for Features Node**: The node creation dropdown now intelligently hides the 'Features' option if a features node already exists in the project.
 - **Feature Persistence**: The list of features within the 'Features' node is now saved to the database and will persist across sessions.
@@ -20,6 +63,14 @@ All notable changes to this project will be documented in this file.
 - **Edge Creation Rollback**: If edge creation fails, the newly created node is automatically deleted from the database to maintain data integrity.
 
 ### Changed
+- **CustomNode Interface Extension**: Added optional fields for database entities: category, metadata, onEditDatabaseEntity, onDeleteDatabaseEntity
+- **ProjectDetail Node Transformation**: Enhanced node data to include category object and metadata for all custom nodes
+- **Database Entity Handlers**: Integrated edit and delete handlers into ProjectDetail canvas component
+- **Modal State Management**: Added state variables for database entity modals (add and edit)
+- **Tech Stack Node Registration**: Added TechStackNode to React Flow node types registry as "techStack" type
+- **Project Detail State Management**: Extended handleCreateNode callback dependencies to include handleTechStackUpdate
+- **Edge Loading Logic**: Updated edge transformation to detect and style tech stack edges with purple color
+- **Node Loading Logic**: Enhanced node parsing to handle tech_stack category with metadata deserialization
 - **Features Node Styling**: The 'Features' node now renders with a dark background and a blue border to distinguish it visually. Its default title is now "Features" instead of "New Features".
 - **Edge Connection Specificity**: Edges created between nodes now connect to the specific handle point (+ icon) that was clicked, rather than a default position.
 - **Edge Type for Features**: Changed from "step" edges to "smoothstep" edges for smoother visual appearance.
@@ -39,6 +90,16 @@ All notable changes to this project will be documented in this file.
 - **Updated RLS Policy**: Recreated "Users can insert edges in their projects" policy to support new handle columns.
 
 ### Technical Improvements
+- **Database Entity Form Validation**: Implemented comprehensive Zod schema with regex pattern matching for entity names, character limits, and required field validation
+- **Security Model UX**: Created radio group cards with icons (Globe, Lock, Users) for intuitive security selection
+- **Sibling Node Positioning**: Intelligent horizontal spacing algorithm for multiple database entities (250px apart)
+- **Tooltip Integration**: Added shadcn/ui Tooltip component to CustomNode for database entity detail display
+- **Delete Confirmation**: Native browser confirm dialog for database entity deletion with cascade delete handling
+- **TypeScript Type Safety**: Created shared TechCategory and TechStackEntry types exported from AddTechStackModal
+- **Form Validation**: Implemented conditional required field validation based on selected tech category
+- **Reusable Modal Components**: Built AddTechStackModal and EditTechStackModal with consistent UX patterns
+- **Metadata Storage**: Leveraged existing JSONB metadata column for flexible tech stack data storage
+- **Icon Mapping**: Created category-to-icon mapping using lucide-react icons for visual distinction
 - **Code Cleanup**: Removed unused `transformEdgeToReactFlow` function (lines 35-42 in ProjectDetail.tsx).
 - **Debug Logging**: Added comprehensive debug logging for edge creation and rendering diagnostics.
 - **Error Handling**: Improved error messages to include specific error details for better debugging.

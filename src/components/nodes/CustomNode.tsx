@@ -1,10 +1,16 @@
 import { memo, useState, useRef } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
-import { Folder } from "lucide-react";
+import { Folder, Database, Lock, Globe, Users, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { NodeHandleButton } from "./NodeHandleButton";
 import type { NodeCategoryId } from "@/lib/nodeCategories";
 
@@ -19,6 +25,18 @@ interface CustomNodeProps {
     isRoot: boolean;
     onCreateNode?: (parentNodeId: string, categoryId: NodeCategoryId, position: "top" | "right" | "bottom" | "left") => void;
     childCategoryNames?: string[];
+    category?: {
+      id: string;
+      name: string;
+    };
+    metadata?: {
+      entity_name?: string;
+      description?: string;
+      security_model?: string;
+      notes?: string;
+    };
+    onEditDatabaseEntity?: (node: any) => void;
+    onDeleteDatabaseEntity?: (node: any) => void;
   };
 }
 
@@ -160,6 +178,128 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
     }, 500);
   };
 
+  // Helper function to render security badge
+  function renderSecurityBadge(securityModel: string) {
+    const badges = {
+      public: {
+        icon: Globe,
+        label: 'Public Access',
+        colorClasses: 'bg-green-900/30 text-green-400 border-green-700'
+      },
+      private_owner: {
+        icon: Lock,
+        label: 'Owner Only',
+        colorClasses: 'bg-blue-900/30 text-blue-400 border-blue-700'
+      },
+      private_user: {
+        icon: Users,
+        label: 'Authenticated Users',
+        colorClasses: 'bg-orange-900/30 text-orange-400 border-orange-700'
+      }
+    };
+
+    const badge = badges[securityModel as keyof typeof badges] || badges.private_owner;
+    const Icon = badge.icon;
+
+    return (
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-medium ${badge.colorClasses}`}>
+        <Icon className="w-3.5 h-3.5" />
+        <span>{badge.label}</span>
+      </div>
+    );
+  }
+
+  // Check if this is a database entity node
+  const isDatabaseEntity = data.category?.name === 'database';
+
+  // Render database entity node
+  if (isDatabaseEntity) {
+    return (
+      <TooltipProvider>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <div className="w-[300px] rounded-lg border-2 border-pink-500 bg-slate-900 p-4 shadow-lg hover:shadow-xl transition-shadow cursor-help">
+              {/* Top Handle */}
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-12 flex items-center justify-center">
+                <Handle
+                  type="target"
+                  position={Position.Top}
+                  className="!w-3 !h-3 !bg-pink-500 !border-2 !border-slate-950"
+                />
+              </div>
+
+              {/* Header with Icon and Title */}
+              <div className="flex items-start gap-3 mb-3">
+                <Database className="w-5 h-5 text-pink-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-white text-base truncate">
+                    {data.title}
+                  </h3>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p className="text-sm text-slate-300 mb-3 line-clamp-2 leading-relaxed">
+                {data.metadata?.description || 'No description provided'}
+              </p>
+
+              {/* Security Badge */}
+              <div className="mb-3">
+                {renderSecurityBadge(data.metadata?.security_model || 'private_owner')}
+              </div>
+
+              {/* Notes Preview (if exists) */}
+              {data.metadata?.notes && (
+                <div className="mb-3 p-3 rounded-md bg-slate-800/50 border border-slate-700">
+                  <p className="text-xs text-slate-400 font-mono line-clamp-3 leading-relaxed whitespace-pre-wrap">
+                    {data.metadata.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-3 border-t border-slate-700">
+                <button
+                  onClick={() => data.onEditDatabaseEntity?.(data)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-sm font-medium"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => data.onDeleteDatabaseEntity?.(data)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-red-900/20 hover:bg-red-900/40 text-red-400 hover:text-red-300 transition-colors text-sm font-medium"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-sm p-4 bg-slate-800 border-slate-700" sideOffset={10}>
+            <div className="space-y-3">
+              <div>
+                <p className="font-semibold text-base mb-1 text-white">{data.title}</p>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  {data.metadata?.description}
+                </p>
+              </div>
+
+              {data.metadata?.notes && (
+                <div className="pt-2 border-t border-slate-700">
+                  <p className="text-xs font-semibold text-slate-400 mb-1">NOTES:</p>
+                  <p className="text-xs text-slate-400 font-mono whitespace-pre-wrap leading-relaxed">
+                    {data.metadata.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -196,7 +336,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
             className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-12 flex items-center justify-center"
           >
             <Handle
-              type="target"
+              type="source"
               position={Position.Top}
               id="top"
               className="!w-3 !h-3 !bg-white !border-2 !border-slate-950"
@@ -210,7 +350,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
             className="absolute -right-6 top-1/2 -translate-y-1/2 w-12 h-16 flex items-center justify-center"
           >
             <Handle
-              type="target"
+              type="source"
               position={Position.Right}
               id="right"
               className="!w-3 !h-3 !bg-white !border-2 !border-slate-950"
@@ -224,7 +364,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
             className="absolute -left-6 top-1/2 -translate-y-1/2 w-12 h-16 flex items-center justify-center"
           >
             <Handle
-              type="target"
+              type="source"
               position={Position.Left}
               id="left"
               className="!w-3 !h-3 !bg-white !border-2 !border-slate-950"
