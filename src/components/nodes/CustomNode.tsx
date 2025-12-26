@@ -1,5 +1,5 @@
 import { memo, useState, useRef } from "react";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, useNodes } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import { Folder } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +29,9 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [hoveredHandle, setHoveredHandle] = useState<"top" | "right" | "bottom" | "left" | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const allNodes = useNodes();
+  const featureNodeExists = allNodes.some(node => node.type === 'features');
 
   const handleSaveTitle = async () => {
     if (!editedTitle.trim()) {
@@ -251,6 +254,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
               onCreateNode={(categoryId) => data.onCreateNode!(data.id, categoryId, "top")}
               onMouseEnter={() => handleHandleMouseEnter("top")}
               onMouseLeave={handleHandleMouseLeave}
+              disableFeature={featureNodeExists}
             />
           )}
           {hoveredHandle === "bottom" && (
@@ -259,6 +263,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
               onCreateNode={(categoryId) => data.onCreateNode!(data.id, categoryId, "bottom")}
               onMouseEnter={() => handleHandleMouseEnter("bottom")}
               onMouseLeave={handleHandleMouseLeave}
+              disableFeature={featureNodeExists}
             />
           )}
           {hoveredHandle === "right" && (
@@ -267,6 +272,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
               onCreateNode={(categoryId) => data.onCreateNode!(data.id, categoryId, "right")}
               onMouseEnter={() => handleHandleMouseEnter("right")}
               onMouseLeave={handleHandleMouseLeave}
+              disableFeature={featureNodeExists}
             />
           )}
           {hoveredHandle === "left" && (
@@ -275,6 +281,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
               onCreateNode={(categoryId) => data.onCreateNode!(data.id, categoryId, "left")}
               onMouseEnter={() => handleHandleMouseEnter("left")}
               onMouseLeave={handleHandleMouseLeave}
+              disableFeature={featureNodeExists}
             />
           )}
         </>
@@ -287,6 +294,7 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
           onCreateNode={(categoryId) => data.onCreateNode!(data.id, categoryId, "bottom")}
           onMouseEnter={() => handleHandleMouseEnter("bottom")}
           onMouseLeave={handleHandleMouseLeave}
+          disableFeature={featureNodeExists}
         />
       )}
 

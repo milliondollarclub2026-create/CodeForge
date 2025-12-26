@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -124,7 +124,8 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);
-  const { setCenter } = useReactFlow();
+  const { setCenter, getNode } = useReactFlow();
+  const hasCentered = useRef(false);
 
   const nodeTypes = useMemo(() => ({
     custom: CustomNode,
@@ -151,8 +152,8 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
     }
   };
 
-  const handleFeaturesUpdate = (nodeId: string, features: any[]) => {
-    // Update the local node data when features change
+  const handleFeaturesUpdate = async (nodeId: string, features: any[]) => {
+    // Update the local node data first for immediate UI feedback
     setNodes((nds) =>
       nds.map((node) =>
         node.id === nodeId
@@ -160,6 +161,23 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           : node
       )
     );
+
+    // Then, save the updated features to the database
+    try {
+      const { error } = await supabase
+        .from("nodes")
+        .update({ metadata: { features } })
+        .eq("id", nodeId);
+
+      if (error) {
+        toast.error("Failed to save features.");
+        console.error("Error updating features:", error);
+        // Here you might want to add logic to revert the optimistic update
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred while saving features.");
+      console.error("Catch block error updating features:", error);
+    }
   };
 
   const handleCreateNode = useCallback(async (
@@ -171,15 +189,9 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // DEBUG: Log to understand the issue
-      console.log("🔍 Debug - parentNodeId:", parentNodeId);
-      console.log("🔍 Debug - nodes array:", nodes);
-      console.log("🔍 Debug - nodes.map(n => n.id):", nodes.map(n => n.id));
-
-      // Get parent node for position calculation
-      const parentNode = nodes.find((n) => n.id === parentNodeId);
-      console.log("🔍 Debug - Found parent node:", parentNode);
-
+      // Get parent node for position calculation using the hook to avoid stale state
+      const parentNode = getNode(parentNodeId);
+      
       if (!parentNode) {
         toast.error("Parent node not found");
         return;
@@ -199,6 +211,10 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
 
       // Calculate position
       const newPosition = calculateChildPosition(parentNode, position);
+      
+      const title = categoryId === "feature" 
+        ? "Features" 
+        : `New ${NODE_CATEGORIES[categoryId].name}`;
 
       // Create node in database
       const { data: newNode, error: nodeError } = await supabase
@@ -207,7 +223,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           project_id: projectId,
           category_id: category.id,
           parent_node_id: parentNodeId,
-          title: `New ${NODE_CATEGORIES[categoryId].name}`,
+          title: title,
           position_x: newPosition.x,
           position_y: newPosition.y,
           status: "draft",
@@ -221,20 +237,30 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
         return;
       }
 
+      // Define opposite handles for connection
+      const oppositeHandle = {
+        top: "bottom",
+        bottom: "top",
+        right: "left",
+        left: "right",
+      };
+
       // Create edge in database
-      const { error: edgeError } = await supabase
+      const { data: newEdge, error: edgeError } = await supabase
         .from("edges")
         .insert({
           project_id: projectId,
           source_node_id: parentNodeId,
           target_node_id: newNode.id,
+          source_handle: position,
+          target_handle: oppositeHandle[position],
           edge_type: "parent_child",
           label: null,
         })
         .select()
         .single();
 
-      if (edgeError) {
+      if (edgeError || !newEdge) {
         toast.error("Failed to create connection");
         return;
       }
@@ -267,11 +293,13 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
             },
       };
 
-      // Optimistic update: Add edge to canvas with animated dashed style for features
+      // Optimistic update: Add edge to canvas
       const reactFlowEdge: Edge = {
-        id: `${parentNodeId}-${newNode.id}`,
+        id: newEdge.id,
         source: parentNodeId,
         target: newNode.id,
+        sourceHandle: newEdge.source_handle || undefined,
+        targetHandle: newEdge.target_handle || undefined,
         type: isFeatureNode ? "step" : "default",
         animated: isFeatureNode,
         style: isFeatureNode ? {
@@ -288,7 +316,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
       console.error("Error creating node:", error);
       toast.error("An unexpected error occurred");
     }
-  }, [nodes, projectId, setNodes, setEdges, handleFeaturesUpdate]);
+  }, [projectId, setNodes, setEdges, handleFeaturesUpdate, getNode]);
 
   const handleNodeDragStop = async (event: any, node: Node) => {
     // Save new position to database for all nodes (including root)
@@ -426,6 +454,8 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
           id: edge.id,
           source: edge.source_node_id,
           target: edge.target_node_id,
+          sourceHandle: edge.source_handle || undefined,
+          targetHandle: edge.target_handle || undefined,
           type: isFeatureEdge ? "step" : "default",
           label: edge.label || undefined,
           animated: isFeatureEdge,
@@ -448,7 +478,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
 
   // Auto-center on root node after nodes load
   useEffect(() => {
-    if (nodes.length > 0 && !loading) {
+    if (nodes.length > 0 && !loading && !hasCentered.current) {
       // Find root node (always at position 0, 0)
       const rootNode = nodes.find((node) => node.data.isRoot);
 
@@ -460,6 +490,7 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
             duration: 300,
           });
         }, 100);
+        hasCentered.current = true;
       }
     }
   }, [nodes, loading, setCenter]);

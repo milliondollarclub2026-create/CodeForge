@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2025-12-26
+
+### Added
+- **Interactive Features Node**: Introduced a new node type called 'Features'. This node allows users to dynamically add, view, and remove a list of feature items directly on the canvas.
+- **One-per-project limit for Features Node**: The node creation dropdown now intelligently hides the 'Features' option if a features node already exists in the project.
+- **Feature Persistence**: The list of features within the 'Features' node is now saved to the database and will persist across sessions.
+
+### Changed
+- **Features Node Styling**: The 'Features' node now renders with a dark background and a blue border to distinguish it visually. Its default title is now "Features" instead of "New Features".
+- **Edge Connection Specificity**: Edges created between nodes now connect to the specific handle point (+ icon) that was clicked, rather than a default position.
+
+### Fixed
+- **Node Creation Stale State Bug**: Fixed a critical bug where creating a node would fail with a "parent node not found" error. The logic now correctly uses React Flow's internal state to find the parent node.
+- **Missing Connection Lines on Reload**: Fixed an issue where connection lines would disappear after reloading the page. The data-fetching logic now correctly loads the source and target handle information for each edge.
+- **Node Creation Failure in New Projects**: Resolved a bug that prevented node creation in new projects due to a mismatch between the application code and the database schema for edges.
+
+---
+
 ## [2024-12-25] - Phase 1: Node System Foundation (Database Schema)
 
 ### Database Schema - PRD Builder Node System

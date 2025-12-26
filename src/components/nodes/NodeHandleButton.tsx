@@ -15,9 +15,10 @@ interface NodeHandleButtonProps {
   onCreateNode: (categoryId: NodeCategoryId) => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  disableFeature?: boolean;
 }
 
-export const NodeHandleButton = ({ position, onCreateNode, onMouseEnter, onMouseLeave }: NodeHandleButtonProps) => {
+export const NodeHandleButton = ({ position, onCreateNode, onMouseEnter, onMouseLeave, disableFeature }: NodeHandleButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const positionClasses = {
@@ -41,6 +42,10 @@ export const NodeHandleButton = ({ position, onCreateNode, onMouseEnter, onMouse
     left: "left",
   } as const;
 
+  const availableNodeCategories = Object.entries(NODE_CATEGORIES).filter(
+    ([key]) => !(disableFeature && key === "feature")
+  );
+
   return (
     <div
       className={cn("absolute z-20", positionClasses[position])}
@@ -62,7 +67,7 @@ export const NodeHandleButton = ({ position, onCreateNode, onMouseEnter, onMouse
           className="w-48"
           sideOffset={12}
         >
-          {Object.entries(NODE_CATEGORIES).map(([key, category]) => {
+          {availableNodeCategories.map(([key, category]) => {
             const Icon = category.icon;
             return (
               <DropdownMenuItem

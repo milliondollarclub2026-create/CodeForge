@@ -4,6 +4,43 @@ This file tracks all backend-related changes including database migrations, API 
 
 ---
 
+## [2025-12-26] - Features Node & Edge Handle Support
+
+### Summary
+Added support for specific edge connection points and enabled persistence for dynamic node content (starting with the 'Features' node).
+
+### Migration Files
+
+#### 1. `20251226120000_add_handles_to_edges.sql`
+
+**Table Modified**: `public.edges`
+
+**Purpose**: To store the specific source and target handles for an edge, allowing connections to be made to precise points on a node (e.g., 'top', 'right').
+
+**Schema Changes**:
+```sql
+ALTER TABLE public.edges
+ADD COLUMN source_handle TEXT,
+ADD COLUMN target_handle TEXT;
+```
+
+**RLS Configuration**:
+- The existing `INSERT` policy on `public.edges` was recreated to ensure it applies correctly to the new columns. No fundamental changes to the security logic were made; the `GRANT` for `INSERT` on the table covers the new columns implicitly.
+
+### Schema/Data Usage Changes
+
+**Table Modified**: `public.nodes`
+
+**Purpose**: To persist the list of features for the 'Features' node type.
+
+**Usage Change**:
+- The `metadata` column (a `JSONB` type that was present but unused) is now utilized to store the array of feature items for a 'Features' node.
+- **Example Data in `metadata` column**: `{"features": [{"id": 1, "text": "User can log in"}, {"id": 2, "text": "User can view dashboard"}]}`
+
+---
+
+## [2024-12-25] - Phase 1: Node System Foundation
+
 ## [2024-12-25] - Phase 1: Node System Foundation
 
 ### Summary
