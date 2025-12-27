@@ -66,40 +66,55 @@ conversational AI, then generates comprehensive PRDs.
 ✅ React Flow infinite canvas with zoom/pan
 ✅ Dark theme UI
 ✅ Routing and navigation
+✅ Node system foundation (Phase 1)
+✅ Node enhancements (Phase 2)
+✅ Basic sub-features (Phase 3 - partial)
+✅ **LLM Orchestrator (Phase 4 - COMPLETE)**
 
-🚧 In Progress: Node system foundation
+🚧 In Progress: PRD generation templates (Phase 5)
 
 ## Phased Rollout
 
-**Phase 1: Node Foundation (Current)**
+**Phase 1: Node Foundation** ✅ COMPLETE
 - Database: Categories, Nodes, Edges tables with RLS
 - API: CRUD operations with ownership verification
-- UI: Root node auto-creation, manual Feature node creation
-- No LLM yet (manual workflow only)
+- UI: Root node auto-creation, manual node creation
+- React Flow infinite canvas integration
 
-**Phase 2: Node Enhancement**
-- Edit node titles, priority, status
-- Multiple node types (Target Audience, Tech Stack, Competitor)
-- Node search/filter
+**Phase 2: Node Enhancement** ✅ COMPLETE
+- Edit node titles, metadata, status
+- Multiple node types (Features, Tech Stack, Database, User Flows)
+- Dynamic node rendering with specialized UIs
 - Canvas state optimizations
 
-**Phase 3: Sub-Features**
-- Notes (rich text editor)
-- To-do lists (checkboxes + text)
-- Moodboard (image upload to Supabase Storage)
-- Per-feature state management
+**Phase 3: Sub-Features** ✅ PARTIAL
+- ✅ Node metadata (JSONB storage)
+- ✅ Features list management
+- ✅ Tech stack categorization (6 types)
+- ✅ Database entity modeling
+- ✅ User flow step tracking
+- ⏳ Rich text notes (future)
+- ⏳ To-do lists (future)
+- ⏳ Moodboard images (future)
 
-**Phase 4: LLM Orchestrator**
-- Chat interface sidebar
-- Anthropic API integration with caching
-- Conversational node creation
-- Context-aware suggestions
+**Phase 4: LLM Orchestrator** ✅ COMPLETE
+- ✅ Chat interface sidebar with Ctrl+A shortcut
+- ✅ Claude Sonnet 4 integration (Anthropic API)
+- ✅ OpenAI Whisper for voice transcription
+- ✅ 5-step guided workflow (context → features → tech stack → database → user flows)
+- ✅ Conversational node creation with auto-detection
+- ✅ Smart cardinality enforcement (singleton vs multi-instance)
+- ✅ Interactive options system with SUGGESTIONS
+- ✅ Real-time canvas updates
+- ✅ localStorage chat persistence
+- ✅ Edge handle routing system
 
-**Phase 5: PRD Generation**
+**Phase 5: PRD Generation** ⏳ NEXT
 - Template system (frontend/backend/database PRDs)
 - LLM-powered PRD writing using full project context
 - Export to Markdown/PDF
 - Copy-paste optimization for AI coding tools
+- Prompt caching for cost optimization
 
 ## Key Design Principles
 1. **Database as source of truth** - React Flow is view layer only

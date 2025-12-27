@@ -2,7 +2,178 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2025-12-26
+## [Unreleased] - 2025-12-27
+
+### Added - AI-Powered PRD Chat Assistant
+- **AI Chat Sidebar**: Introduced conversational AI assistant for guided PRD creation
+  - Opens with `Ctrl+A` keyboard shortcut or "AI Assistant" button
+  - Slides in from right side with backdrop overlay
+  - Dark theme styling matching existing UI
+  - Responsive design (full-width on mobile, 400px on desktop)
+- **Text Input Support**: Natural language chat interface powered by Claude Sonnet 4
+  - Real-time message streaming
+  - Multi-line input support
+  - Message history persistence via localStorage
+  - Typing indicators and loading states
+- **Voice Input Support**: Speech-to-text integration with OpenAI Whisper
+  - Microphone button with recording indicator
+  - Real-time audio capture using MediaRecorder API
+  - WebM audio format with automatic transcription
+  - Visual feedback during recording (pulse animation)
+- **5-Step Guided Workflow**: Structured PRD generation process
+  - **Step 0 - Context Gathering**: AI asks about project goals and description
+  - **Step 1 - Features**: 6-8 multi-select options for core features
+  - **Step 2 - Tech Stack**: Technical capabilities selection (non-technical language)
+  - **Step 3 - Database**: Data entity definition with security models
+  - **Step 4 - User Flows**: User journey mapping with steps
+- **Interactive Options System**: Multi-select option buttons for each AI question
+  - Clickable option cards (2x2 grid layout)
+  - Visual selection feedback
+  - Send selected options as message
+  - Custom text input still available
+- **Smart Node Auto-Creation**: AI automatically creates context nodes
+  - **Singleton enforcement**: Features and Tech Stack (max 1 per project)
+  - **Multi-instance support**: Database and User Flows (unlimited)
+  - **Duplicate detection**: Checks if node already exists before creating
+  - **Progressive population**: Creates nodes one-by-one as conversation flows
+  - **Intelligent positioning**: Arranges nodes in circular pattern around root
+- **SUGGESTIONS System**: AI generates structured suggestions for each step
+  - **Type-specific suggestions**: features, tech_stack, database, user_flows
+  - **Immediate application**: Suggestions added to nodes automatically
+  - **Metadata preservation**: Maintains all node-specific fields
+  - **Visual feedback**: Toast notifications for each node creation/update
+- **Claude Sonnet 4 Integration**: Advanced language model for intelligent conversations
+  - Model: `claude-sonnet-4-20250514`
+  - Max tokens: 2048 (prevents truncation)
+  - Structured system prompt with 12 critical rules
+  - Response parsing for OPTIONS and SUGGESTIONS blocks
+  - Example-driven prompting for consistency
+- **OpenAI Whisper Integration**: High-quality speech-to-text transcription
+  - Model: `whisper-1`
+  - Language: English
+  - Audio format: WebM
+  - Client-side recording, server-side transcription
+- **Chat Components**:
+  - `ChatSidebar.tsx`: Main chat interface with header, messages, input
+  - `ChatMessage.tsx`: Message bubbles with options and suggestions display
+  - `VoiceInput.tsx`: Microphone button with recording state management
+- **Chat Hooks**:
+  - `useChatAssistant.ts`: Manages chat state, API calls, message history
+  - `useKeyboardShortcuts.ts`: Global Ctrl+A handler for chat toggle
+- **Chat API Layer** (`chatApi.ts`):
+  - `sendTextMessage()`: Text chat with Claude Sonnet 4
+  - `sendVoiceMessage()`: Voice transcription + Claude processing
+  - `buildSystemPrompt()`: Dynamic prompt generation with project context
+  - `parseResponse()`: Regex-based extraction of OPTIONS and SUGGESTIONS
+- **Chat Storage** (`chatStorage.ts`):
+  - localStorage persistence per project
+  - Chat history survives page refresh
+  - Session-scoped (not cross-device)
+  - Automatic cleanup on project deletion
+- **Auto-Node Creation Logic** (`autoCreateNode.ts`):
+  - `autoCreateNode()`: Creates nodes with proper cardinality enforcement
+  - `addSuggestionToNode()`: Adds AI suggestions to existing nodes
+  - `processSuggestions()`: Batch processes suggestion groups
+  - Handles singleton vs multi-instance nodes differently
+  - Updates local React Flow state after database changes
+- **Edge Handle System**: Fixed directional edge routing for AI-created nodes
+  - Features: root RIGHT → child LEFT
+  - Tech Stack: root BOTTOM → child TOP
+  - Database: root LEFT → child RIGHT
+  - User Flows: root TOP → child BOTTOM
+  - All edges persist with `source_handle` and `target_handle` columns
+- **TypeScript Types** (`types/chat.ts`):
+  - `Message`: Chat message with role, content, options, suggestions
+  - `ChatResponse`: API response structure
+  - `SuggestionGroup`: Typed suggestion system
+  - `SuggestionItem`: Individual suggestion with metadata
+- **Supabase Edge Functions** (optional deployment):
+  - `chat-text`: Handles text messages securely server-side
+  - `chat-voice`: Handles voice transcription server-side
+  - Keeps API keys secret (not exposed to browser)
+- **Environment Variables**:
+  - `VITE_ANTHROPIC_API_KEY`: Claude API access
+  - `VITE_OPENAI_API_KEY`: Whisper API access
+  - `.env.local.example`: Template for setup
+
+### Changed
+- **CustomNode Handle Updates**: Fixed target handles for Database and User Flows
+  - Database nodes: Changed from `top` to `right` handle
+  - User Flows nodes: Changed from `top` to `bottom` handle
+  - All handles now have explicit IDs for proper edge connections
+- **ProjectDetail Integration**: Added AI chat sidebar to canvas page
+  - Keyboard shortcut registration (Ctrl+A)
+  - "AI Assistant" button in header
+  - Chat state management
+  - Auto-create + suggestion handling
+  - Real-time canvas updates
+- **Package Dependencies**: Added AI and audio processing libraries
+  - `@anthropic-ai/sdk`: Claude API client
+  - `openai`: OpenAI Whisper API client
+
+### Fixed
+- **React Flow Edge Warnings**: Resolved "couldn't create edge" errors
+  - Database nodes now have `right` handle (was missing)
+  - User Flows nodes now have `bottom` handle (was missing)
+  - All child nodes have correct target handles matching edge creation logic
+- **Edge Handle Persistence**: All edges now save with proper handle references
+  - `source_handle` column populated correctly
+  - `target_handle` column populated correctly
+  - React Flow renders edges to correct connection points
+
+### Technical Improvements
+- **LLM Prompt Engineering**: Comprehensive system prompt with examples
+  - 12 critical rules for workflow consistency
+  - Absolute requirements section (no exceptions)
+  - Step-by-step examples for each workflow stage
+  - Response format templates
+  - Mandatory SUGGESTIONS generation after user selections
+- **Cardinality Enforcement**: Smart node creation based on type
+  - Singleton nodes (Features, Tech Stack): Check if ANY exists
+  - Multi-instance nodes (Database, User Flows): Check if SAME TITLE exists
+  - AI awareness of node limits built into system prompt
+- **Response Parsing**: Robust extraction of structured data
+  - Regex patterns for OPTIONS block extraction
+  - JSON parsing for SUGGESTIONS with error handling
+  - Cleanup of raw LLM response (removes parsed sections)
+  - Minimum 6 options validation
+- **Chat State Management**: Comprehensive state handling
+  - Message history with timestamps
+  - Loading states (text, voice, recording)
+  - Error states with user-friendly messages
+  - Optimistic UI updates
+- **Keyboard Shortcuts**: Global event handling
+  - Prevents default Ctrl+A text selection when chat enabled
+  - Platform-aware (Ctrl on Windows/Linux, Cmd on Mac)
+  - Toggle behavior (open/close)
+- **localStorage Integration**: Client-side chat persistence
+  - Scoped per project ID
+  - Survives page refresh and navigation
+  - Automatic serialization/deserialization
+  - No server storage required
+- **Audio Recording**: MediaRecorder API implementation
+  - WebM format support
+  - Blob creation for upload
+  - Error handling for permission denials
+  - Maximum recording time limits
+- **Toast Notifications**: User feedback for all operations
+  - Node creation success messages
+  - Suggestion addition confirmations
+  - Error notifications with details
+  - Consistent UX across all flows
+
+### Dependencies Added
+- `@anthropic-ai/sdk@latest`: Anthropic Claude API client
+- `openai@latest`: OpenAI API client (Whisper)
+
+### Migration Notes
+- No database migrations required (uses existing metadata JSONB columns)
+- Optional: Deploy Supabase Edge Functions for server-side API calls
+- Required: Add API keys to `.env.local` (see `.env.local.example`)
+
+---
+
+## [2025-12-26] - Node System Enhancements
 
 ### Added
 - **User Flows Node System**: Introduced comprehensive user flow documentation system for tracking step-by-step user interactions:
