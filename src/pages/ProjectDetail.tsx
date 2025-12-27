@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ArrowLeft, LogOut, Plus, Minus, Hand, Pencil, FileText, Sparkles } from "lucide-react";
+import { ArrowLeft, LogOut, Plus, Minus, Hand, Pencil, FileText, Sparkles, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import {
   ReactFlow,
@@ -32,6 +32,8 @@ import { EditDatabaseEntityModal } from "@/components/EditDatabaseEntityModal";
 import { AddUserFlowModal } from "@/components/AddUserFlowModal";
 import { EditUserFlowModal } from "@/components/EditUserFlowModal";
 import { NODE_CATEGORIES, type NodeCategoryId } from "@/lib/nodeCategories";
+import ChatSidebar from "@/components/ChatSidebar";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 interface Project {
   id: string;
@@ -130,7 +132,7 @@ const CustomControls = () => {
 };
 
 // Canvas component
-const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
+const ProjectDetailCanvas = ({ projectId, refreshTrigger }: { projectId: string; refreshTrigger?: number }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [loading, setLoading] = useState(true);
@@ -514,28 +516,27 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
     }
   };
 
-  useEffect(() => {
-    const fetchNodesAndEdges = async () => {
-      setLoading(true);
+  const fetchNodesAndEdges = useCallback(async () => {
+    setLoading(true);
 
-      // Verify user ownership (defense in depth)
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+    // Verify user ownership (defense in depth)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
-      // Fetch full project data (not just id) to get description
-      const { data: projectData } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .eq("user_id", user.id)
-        .single();
+    // Fetch full project data (not just id) to get description
+    const { data: projectData } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .eq("user_id", user.id)
+      .single();
 
-      if (!projectData) {
-        console.error("Unauthorized or project not found");
-        return;
-      }
+    if (!projectData) {
+      console.error("Unauthorized or project not found");
+      return;
+    }
 
       // Fetch nodes
       const { data: nodesData, error: nodesError } = await supabase
@@ -730,15 +731,16 @@ const ProjectDetailCanvas = ({ projectId }: { projectId: string }) => {
         };
       });
 
-      setNodes(flowNodes);
-      setEdges(flowEdges || []);
-      setLoading(false);
-    };
+    setNodes(flowNodes);
+    setEdges(flowEdges || []);
+    setLoading(false);
+  }, [projectId]);
 
+  useEffect(() => {
     if (projectId) {
       fetchNodesAndEdges();
     }
-  }, [projectId]);
+  }, [projectId, fetchNodesAndEdges, refreshTrigger]);
 
   // Auto-center on root node after nodes load
   useEffect(() => {
@@ -1001,7 +1003,20 @@ const ProjectDetail = () => {
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(true);
   const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [editedProjectName, setEditedProjectName] = useState("");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Keyboard shortcut: Ctrl+Shift+A or Cmd+Shift+A to toggle chat
+  useKeyboardShortcuts({
+    'ctrl+shift+a': () => setIsChatOpen(prev => !prev),
+    'cmd+shift+a': () => setIsChatOpen(prev => !prev),
+  });
+
+  // Callback to refresh canvas when AI creates nodes
+  const handleNodesUpdated = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -1209,24 +1224,47 @@ const ProjectDetail = () => {
             )}
           </div>
 
-          {/* Right: Sign Out Button */}
-          <Button
-            variant="ghost"
-            onClick={handleSignOut}
-            className="h-9"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign out
-          </Button>
+          {/* Right: AI Assistant + Sign Out */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsChatOpen(true)}
+              className="h-9 gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              AI Assistant
+              <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-zinc-800 rounded border border-zinc-700">
+                Ctrl+Shift+A
+              </kbd>
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleSignOut}
+              className="h-9"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Infinite Canvas - Full height below header */}
       <div className="h-[calc(100vh-4rem)]">
         <ReactFlowProvider>
-          <ProjectDetailCanvas projectId={id!} />
+          <ProjectDetailCanvas projectId={id!} refreshTrigger={refreshTrigger} />
         </ReactFlowProvider>
       </div>
+
+      {/* AI Chat Sidebar */}
+      <ChatSidebar
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        projectId={id!}
+        projectTitle={project.name}
+        projectDescription={project.description || undefined}
+        onNodesUpdated={handleNodesUpdated}
+      />
     </div>
   );
 };
