@@ -128,26 +128,28 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
         <nav className="flex-1 px-4 py-6 space-y-2">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.path;
-            return (
-              <Tooltip key={link.title} delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "w-full justify-start h-11",
-                      isCollapsed && "justify-center",
-                      isActive && "border-2 border-primary"
-                    )}
-                    onClick={() => navigate(link.path)}
-                  >
-                    <link.icon className="h-5 w-5 text-primary" />
-                    {!isCollapsed && <span className="ml-3">{link.title}</span>}
-                  </Button>
-                </TooltipTrigger>
-                {isCollapsed && (
-                  <TooltipContent side="right">{link.title}</TooltipContent>
+            const button = (
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start h-11",
+                  isCollapsed && "justify-center",
+                  isActive && "border-2 border-primary"
                 )}
+                onClick={() => navigate(link.path)}
+              >
+                <link.icon className="h-5 w-5 text-primary" />
+                {!isCollapsed && <span className="ml-3">{link.title}</span>}
+              </Button>
+            );
+
+            return isCollapsed ? (
+              <Tooltip key={link.title} delayDuration={0}>
+                <TooltipTrigger asChild>{button}</TooltipTrigger>
+                <TooltipContent side="right">{link.title}</TooltipContent>
               </Tooltip>
+            ) : (
+              <div key={link.title}>{button}</div>
             );
           })}
         </nav>
@@ -174,25 +176,15 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }: SidebarProps) => {
                   <div className="h-8 w-8 rounded-full bg-muted" />
                 )}
                 {!isCollapsed && user && (
-                  <div className="ml-3 text-left overflow-hidden flex-1 min-w-0">
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <p className="text-sm font-medium leading-none truncate">
-                          {user.user_metadata?.full_name || user.email}
-                        </p>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        {user.user_metadata?.full_name || user.email}
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {user.email}
-                        </p>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">{user.email}</TooltipContent>
-                    </Tooltip>
+                  <div className="ml-3 text-left flex-1 min-w-0 max-w-[160px] relative">
+                    <p className="text-sm font-medium leading-none truncate">
+                      {user.user_metadata?.full_name || user.email}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {user.email}
+                    </p>
+                    {/* Fade effect for overflow */}
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
                   </div>
                 )}
               </div>

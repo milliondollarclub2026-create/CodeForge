@@ -10,10 +10,22 @@ import {
   Plug,
   Plus,
   Pencil,
+  Trash2,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddTechStackModal, TechStackEntry, TechCategory } from "@/components/AddTechStackModal";
 import { EditTechStackModal } from "@/components/EditTechStackModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TechStackNodeProps {
   data: {
@@ -48,6 +60,8 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TechStackEntry | null>(null);
   const [isHandleHovered, setIsHandleHovered] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState<TechStackEntry | null>(null);
 
   const openAddDialog = () => {
     setIsAddDialogOpen(true);
@@ -78,6 +92,28 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
       (entry) => entry.id !== editingEntry.id
     );
     data.onTechStackUpdate(data.id, updatedTechStack);
+  };
+
+  const handleQuickDelete = (e: React.MouseEvent, entry: TechStackEntry) => {
+    e.stopPropagation();
+    setEntryToDelete(entry);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    if (!entryToDelete) return;
+    const updatedTechStack = (data.techStack || []).filter(
+      (item) => item.id !== entryToDelete.id
+    );
+    data.onTechStackUpdate(data.id, updatedTechStack);
+    setShowDeleteDialog(false);
+    setEntryToDelete(null);
+  };
+
+  const handleAddComment = (e: React.MouseEvent, entry: TechStackEntry) => {
+    e.stopPropagation();
+    // TODO: Implement comment functionality
+    console.log("Add comment for:", entry.name);
   };
 
   // Determine handle position based on connection side
@@ -199,7 +235,7 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
             return (
               <div
                 key={entry.id}
-                className="relative group cursor-pointer p-3 rounded-md bg-slate-900/50 border border-transparent hover:border-amber-500/50 transition-colors"
+                className="relative group cursor-pointer p-3 pr-14 rounded-md bg-slate-900/50 border border-transparent hover:border-amber-500/50 transition-colors"
                 onClick={() => openEditDialog(entry)}
               >
                 <div className="flex items-start gap-3">
@@ -218,7 +254,30 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
                     )}
                   </div>
                 </div>
-                <Pencil className="h-3 w-3 absolute top-2 right-2 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* Action icons: Delete, Comment, Edit (right to left) */}
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => handleQuickDelete(e, entry)}
+                    className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3 w-3 text-red-500" />
+                  </button>
+                  <button
+                    onClick={(e) => handleAddComment(e, entry)}
+                    className="p-1 hover:bg-amber-500/20 rounded transition-colors"
+                    title="Add comment"
+                  >
+                    <MessageCircle className="h-3 w-3 text-amber-400" />
+                  </button>
+                  <button
+                    onClick={() => openEditDialog(entry)}
+                    className="p-1 hover:bg-amber-500/20 rounded transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="h-3 w-3 text-amber-400" />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -246,6 +305,27 @@ export const TechStackNode = memo(({ data }: TechStackNodeProps) => {
           entry={editingEntry}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tech Stack Entry</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{entryToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 });

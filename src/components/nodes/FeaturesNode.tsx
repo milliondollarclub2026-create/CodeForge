@@ -1,9 +1,19 @@
 import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { cn } from "@/lib/utils";
-import { CheckSquare, Plus, Pencil, Zap } from "lucide-react";
+import { CheckSquare, Plus, Pencil, Zap, Trash2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureDialog } from "@/components/FeatureDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Feature {
   id: number;
@@ -25,6 +35,8 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
   const [isHandleHovered, setIsHandleHovered] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [featureToDelete, setFeatureToDelete] = useState<Feature | null>(null);
 
   const openAddDialog = () => {
     setEditingFeature(null);
@@ -57,6 +69,28 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
       (feature) => feature.id !== editingFeature.id
     );
     data.onFeaturesUpdate(data.id, updatedFeatures);
+  };
+
+  const handleQuickDelete = (e: React.MouseEvent, feature: Feature) => {
+    e.stopPropagation();
+    setFeatureToDelete(feature);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    if (!featureToDelete) return;
+    const updatedFeatures = (data.features || []).filter(
+      (f) => f.id !== featureToDelete.id
+    );
+    data.onFeaturesUpdate(data.id, updatedFeatures);
+    setShowDeleteDialog(false);
+    setFeatureToDelete(null);
+  };
+
+  const handleAddComment = (e: React.MouseEvent, feature: Feature) => {
+    e.stopPropagation();
+    // TODO: Implement comment functionality
+    console.log("Add comment for:", feature.title);
   };
 
   // Determine handle position based on connection side
@@ -135,7 +169,7 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
         {/* Feature list */}
         <div className="space-y-3">
           {(data.features || []).map((feature) => (
-            <div key={feature.id} className="relative group cursor-pointer p-3 rounded-md bg-slate-900/50 border border-transparent hover:border-blue-500/50 transition-colors" onClick={() => openEditDialog(feature)}>
+            <div key={feature.id} className="relative group cursor-pointer p-3 pr-14 rounded-md bg-slate-900/50 border border-transparent hover:border-blue-500/50 transition-colors" onClick={() => openEditDialog(feature)}>
                 <div className="flex items-start gap-3">
                   <CheckSquare className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-400" />
                   <div>
@@ -143,7 +177,30 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
                     <p className="text-xs text-slate-400 mt-1">{feature.description}</p>
                   </div>
                 </div>
-                 <Pencil className="h-3 w-3 absolute top-2 right-2 text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                {/* Action icons: Delete, Comment, Edit (right to left) */}
+                <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => handleQuickDelete(e, feature)}
+                    className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3 w-3 text-red-500" />
+                  </button>
+                  <button
+                    onClick={(e) => handleAddComment(e, feature)}
+                    className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                    title="Add comment"
+                  >
+                    <MessageCircle className="h-3 w-3 text-blue-400" />
+                  </button>
+                  <button
+                    onClick={() => openEditDialog(feature)}
+                    className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                    title="Edit"
+                  >
+                    <Pencil className="h-3 w-3 text-blue-400" />
+                  </button>
+                </div>
             </div>
           ))}
           {(!data.features || data.features.length === 0) && (
@@ -161,6 +218,27 @@ export const FeaturesNode = memo(({ data }: FeaturesNodeProps) => {
         onDelete={handleDeleteFeature}
         feature={editingFeature}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Feature</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{featureToDelete?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 });

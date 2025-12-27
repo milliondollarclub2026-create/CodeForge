@@ -4,6 +4,48 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - 2025-12-27
 
+### Added - UI/UX Polish and Enhancements (2025-12-27 Evening)
+- **Chat Message Styling Improvement**: Enhanced user message readability
+  - Changed from orange background to muted background with orange border
+  - User messages now have `bg-muted text-foreground border-2 border-primary` styling
+  - Greatly improved text readability while maintaining visual distinction
+- **Feature and Tech Stack Node Action Icons**: Added comprehensive hover controls
+  - **Delete Icon** (red trash bin): Quick delete with confirmation dialog
+  - **Comment Icon** (blue/amber): Placeholder for future comment functionality
+  - **Edit Icon** (blue/amber): Opens edit modal
+  - Icons appear on hover in order: Delete, Comment, Edit (right to left)
+  - Each icon has hover background effect matching its theme color
+  - Added extra right padding (`pr-14`) to prevent text overlap with icons
+- **Modern Delete Confirmation Dialogs**: Replaced browser default `confirm()` popups
+  - FeaturesNode: Clean AlertDialog with feature name in description
+  - TechStackNode: Clean AlertDialog with tech entry name in description
+  - Red delete button (`bg-red-600 hover:bg-red-700`) for danger indication
+  - Cancel and Delete actions with proper styling
+  - Non-blocking: Click outside or ESC to cancel
+  - Accessible: Keyboard navigation supported
+- **Canvas Screen Alignment**: Improved visual alignment and aesthetics
+  - Project title now perfectly centered in header using `justify-center` with absolute positioning for right controls
+  - Signout icon changed to orange (`text-primary`) to match theme
+  - Root node, "Generate PRD" button, and project title now vertically aligned
+- **Sidebar UI Fixes**: Resolved tooltip and text overflow issues
+  - Fixed navigation tooltips persisting after sidebar collapse (conditional rendering based on `isCollapsed`)
+  - Added fade gradient effect for user profile text overflow (`bg-gradient-to-l from-background to-transparent`)
+  - Username/email text now constrained with `max-w-[160px]` and fade effect
+- **Chat Sidebar UX Improvements**: ChatGPT-like clean interface
+  - Removed backdrop blur to keep canvas visible
+  - Reduced chat width from 45% to 30%
+  - Removed "AI Assistant" header completely
+  - Applied soft rounded corners (`rounded-2xl`) throughout
+  - Orange theme integration for microphone button (`bg-primary/10 hover:bg-primary/20`)
+  - Added top-right controls: Reset (RotateCcw icon) and Collapse (ChevronRight icon)
+  - Reset functionality with AlertDialog confirmation and automatic first question resend
+
+### Changed
+- **Delete Workflow**: All deletes now show confirmation dialogs instead of browser default alerts
+  - Seamless backend integration with existing `onFeaturesUpdate` and `onTechStackUpdate` handlers
+  - Automatic Supabase persistence after confirmation
+  - Toast notifications for error handling
+
 ### Added - AI-Powered PRD Chat Assistant
 - **AI Chat Sidebar**: Introduced conversational AI assistant for guided PRD creation
   - Opens with `Ctrl+A` keyboard shortcut or "AI Assistant" button

@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2 } from 'lucide-react';
+import { ChevronRight, Send, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import ChatMessage from './ChatMessage';
 import VoiceInput from './VoiceInput';
 import { Message, SuggestionItem } from '@/types/chat';
@@ -29,6 +39,7 @@ export default function ChatSidebar({
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -240,37 +251,69 @@ export default function ChatSidebar({
     }
   };
 
+  const handleResetChat = () => {
+    // Clear messages
+    setMessages([]);
+    // Clear localStorage
+    saveChatHistory(projectId, []);
+    setShowResetDialog(false);
+
+    // Send first question again
+    const greeting: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: `I will help you define requirements for "${projectTitle}"${
+        projectDescription ? ` - ${projectDescription}` : ''
+      }.\n\nLet's start.`,
+      timestamp: Date.now(),
+    };
+    setMessages([greeting]);
+    saveChatHistory(projectId, [greeting]);
+
+    setTimeout(() => {
+      handleSendMessage('start');
+    }, 500);
+
+    toast({
+      title: 'Chat Reset',
+      description: 'Starting fresh conversation.',
+    });
+  };
+
   if (!isOpen) return null;
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Sidebar - No backdrop, canvas stays visible, 30% width */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
-        onClick={onClose}
-      />
-
-      {/* Sidebar */}
-      <div
-        className={`fixed right-0 top-0 h-full w-full md:w-[45%] bg-slate-900 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ${
+        className={`fixed right-0 top-0 h-full w-full md:w-[30%] bg-card/95 backdrop-blur-sm border-l border-border shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-          <h2 className="text-lg font-semibold text-white">AI Assistant</h2>
+        {/* Top-right controls - Clean minimal buttons */}
+        <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowResetDialog(true)}
+            className="h-8 w-8 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+            title="Reset conversation"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="text-gray-400 hover:text-white hover:bg-slate-800"
+            className="h-8 w-8 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+            title="Collapse chat"
           >
-            <X className="w-5 h-5" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 bg-black">
+        {/* Messages Area - Clean, no header */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 pt-16">
           <div className="space-y-4">
             {messages.map((message, index) => (
               <ChatMessage
@@ -284,8 +327,8 @@ export default function ChatSidebar({
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+                <div className="bg-muted rounded-2xl px-4 py-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               </div>
             )}
@@ -293,35 +336,58 @@ export default function ChatSidebar({
           </div>
         </div>
 
-        {/* Input Area */}
-        <div className="px-6 py-4 border-t border-slate-800 bg-slate-900">
+        {/* Input Area - Clean ChatGPT-style */}
+        <div className="px-4 pb-6 pt-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage(inputText);
             }}
-            className="flex items-center gap-2"
+            className="relative"
           >
-            <VoiceInput onVoiceMessage={handleVoiceMessage} disabled={isLoading} />
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Type your message..."
-              disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-black border border-slate-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-50"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={!inputText.trim() || isLoading}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2 bg-muted rounded-3xl border border-border shadow-sm focus-within:border-primary/50 focus-within:shadow-md transition-all">
+              <VoiceInput onVoiceMessage={handleVoiceMessage} disabled={isLoading} />
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Message..."
+                disabled={isLoading}
+                className="flex-1 px-4 py-3.5 bg-transparent text-foreground placeholder-muted-foreground focus:outline-none disabled:opacity-50"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={!inputText.trim() || isLoading}
+                className="mr-1.5 h-9 w-9 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-30 disabled:hover:bg-primary transition-all"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </form>
         </div>
       </div>
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all messages and start a fresh conversation. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetChat}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

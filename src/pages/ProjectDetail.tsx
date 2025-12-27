@@ -1166,11 +1166,8 @@ const ProjectDetail = () => {
     <div className="min-h-screen bg-background">
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="h-16 flex items-center justify-between px-4">
-          {/* Left section can be empty or have other controls */}
-          <div className="w-1/4"></div>
-
-          {/* Center: Project Title */}
+        <div className="h-16 flex items-center justify-center px-4 relative">
+          {/* Center: Project Title - Absolutely centered */}
           <div className="flex items-center gap-2 max-w-md">
             {isEditingProjectName ? (
               <input
@@ -1205,8 +1202,8 @@ const ProjectDetail = () => {
             )}
           </div>
 
-          {/* Right: AI Assistant + Sign Out */}
-          <div className="flex items-center gap-2">
+          {/* Right: AI Assistant + Sign Out - Absolute positioned */}
+          <div className="absolute right-4 flex items-center gap-2">
             <Button
               variant="outline"
               onClick={() => setIsChatOpen(true)}
@@ -1223,7 +1220,7 @@ const ProjectDetail = () => {
               onClick={handleSignOut}
               className="h-9"
             >
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4 mr-2 text-primary" />
               Sign out
             </Button>
           </div>

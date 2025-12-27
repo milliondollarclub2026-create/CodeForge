@@ -64,10 +64,10 @@ export default function VoiceInput({ onVoiceMessage, disabled }: VoiceInputProps
       size="icon"
       onClick={isRecording ? stopRecording : startRecording}
       disabled={disabled}
-      className={`shrink-0 ${
+      className={`shrink-0 ml-2 h-9 w-9 rounded-full transition-all ${
         isRecording
-          ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-          : 'hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100'
+          ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
+          : 'bg-primary/10 hover:bg-primary/20 text-primary hover:text-primary'
       }`}
     >
       {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
