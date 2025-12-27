@@ -230,11 +230,12 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <div className="w-[300px] rounded-lg border-2 border-purple-500 bg-slate-900 p-4 shadow-lg hover:shadow-xl transition-shadow cursor-help">
-              {/* Top Handle */}
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-12 flex items-center justify-center">
+              {/* Bottom Handle - User Flows connect from root's TOP to child's BOTTOM */}
+              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-16 h-12 flex items-center justify-center">
                 <Handle
                   type="target"
-                  position={Position.Top}
+                  position={Position.Bottom}
+                  id="bottom"
                   className="!w-3 !h-3 !bg-purple-500 !border-2 !border-slate-950"
                 />
               </div>
@@ -362,11 +363,12 @@ export const CustomNode = memo(({ data }: CustomNodeProps) => {
         <Tooltip delayDuration={300}>
           <TooltipTrigger asChild>
             <div className="w-[300px] rounded-lg border-2 border-pink-500 bg-slate-900 p-4 shadow-lg hover:shadow-xl transition-shadow cursor-help">
-              {/* Top Handle */}
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-16 h-12 flex items-center justify-center">
+              {/* Right Handle - Database connects from root's LEFT to child's RIGHT */}
+              <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-12 h-16 flex items-center justify-center">
                 <Handle
                   type="target"
-                  position={Position.Top}
+                  position={Position.Right}
+                  id="right"
                   className="!w-3 !h-3 !bg-pink-500 !border-2 !border-slate-950"
                 />
               </div>
