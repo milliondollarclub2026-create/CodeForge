@@ -309,13 +309,13 @@ export default function ChatSidebar({
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Type your message..."
               disabled={isLoading}
-              className="flex-1 px-4 py-3 bg-black border border-slate-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50"
+              className="flex-1 px-4 py-3 bg-black border border-slate-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all disabled:opacity-50"
             />
             <Button
               type="submit"
               size="icon"
               disabled={!inputText.trim() || isLoading}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl disabled:opacity-50"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
             </Button>

@@ -808,25 +808,13 @@ const ProjectDetailCanvas = ({ projectId, refreshTrigger }: { projectId: string;
 
         {/* Generate Project PRD Button */}
         <Panel position="bottom-center" className="m-4">
-          <Button className="bg-red-600 hover:bg-red-700 text-white shadow-lg">
+          <Button className="bg-green-600 hover:bg-green-700 text-white shadow-lg">
             <Sparkles className="h-4 w-4 mr-2" />
             Generate Project PRD
           </Button>
         </Panel>
 
-        {/* View PRDs Icon */}
-        <Panel position="top-left" className="m-4">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <FileText className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>View your PRDs</p>
-            </TooltipContent>
-          </Tooltip>
-        </Panel>
+        {/* View PRDs Icon - REMOVED */}
       </ReactFlow>
 
       {/* Add Database Entity Modal */}
@@ -1179,15 +1167,8 @@ const ProjectDetail = () => {
       {/* Sticky Header */}
       <header className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="h-16 flex items-center justify-between px-4">
-          {/* Left: Back Button */}
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-            className="h-9"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Projects
-          </Button>
+          {/* Left section can be empty or have other controls */}
+          <div className="w-1/4"></div>
 
           {/* Center: Project Title */}
           <div className="flex items-center gap-2 max-w-md">
@@ -1231,9 +1212,9 @@ const ProjectDetail = () => {
               onClick={() => setIsChatOpen(true)}
               className="h-9 gap-2"
             >
-              <MessageSquare className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4 text-primary" />
               AI Assistant
-              <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-zinc-800 rounded border border-zinc-700">
+              <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-zinc-800 rounded border border-primary">
                 Ctrl+Shift+A
               </kbd>
             </Button>
